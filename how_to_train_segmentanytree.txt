@@ -1,0 +1,5 @@
+HYDRA_FULL_ERROR=1 python3 train.py task=panoptic data=panoptic/treeins_rad8 models=panoptic/area4_ablation_3heads_5 model_name=PointGroup-PAPER training=treeins job_name=treeins_my_first_run
+
+wandb api key: 68bb0d810cea42484b1daca488a6fef3d394d36d
+
+docker run --gpus all -it --rm -v /mnt/data/PDM_repo/Github/SegmentAnyTree:/home/nibio/mutable-outside-world segment-any-tree
