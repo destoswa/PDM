@@ -3,3 +3,44 @@ HYDRA_FULL_ERROR=1 python3 train.py task=panoptic data=panoptic/treeins_rad8 mod
 wandb api key: 68bb0d810cea42484b1daca488a6fef3d394d36d
 
 docker run --gpus all -it --rm -v /mnt/data/PDM_repo/Github/SegmentAnyTree:/home/nibio/mutable-outside-world segment-any-tree
+
+
+
+
+
+
+
+
+prepare data
+f __name__ == '__main__':
+    random.seed(42) #set seed so that validation set gets chosen randomly, but fixed from within the files annotated as
+    #"train" by Stefano's train test split in data_split_metadata.csv
+
+    #las_to_ply('/local/home/vfrawa/Documents/data/NIBIO2/plot16_annotated.las', '/local/home/vfrawa/Documents/data/NIBIO2/plot16_annotated_noground_nolowveg_nooutp.ply', True, True, True)
+
+    #TO ADAPT: path to las data folder (data from the different regions (CULS, etc.) and data_split_metadata.csv must be in this folder)
+    #las_data_basepath = Path('/local/home/vfrawa/Documents/data')
+    las_data_basepath = Path('/home/nibio/mutable-outside-world/data/FORinstance_dataset')
+    train_test_split_path = str(las_data_basepath) + '/data_split_metadata.csv'
+    rel_path_list, forest_region_list, split_list = train_val_test_split(train_test_split_path) #creates train-val-test split from train-test split
+    #TO ADAPT: path where the code folder "OutdoorPanopticSeg_V2" is located
+    code_basepath = '/home/nibio/mutable-outside-world/data/FORinstance_dataset/'
+    codes_data_basepath = Path(code_basepath + '/OutdoorPanopticSeg_V2/data/treeinsfused/raw') #this is where the ply files should be located so that the code accesses them
+    #code_basepath = '/local/home/vfrawa/Documents/code'
+    #codes_data_basepath = Path(code_basepath + '/OutdoorPanopticSeg_V2/data/treeinsfused/raw') #this is where the ply files should be located so that the code accesses them
+    #TO ADAPT: choose whether points labelled as ground, low vegetation and outpoints should be removed entirely or not
+    remove_ground = False
+    remove_lowveg = False
+    remove_outpoints = False
+
+    testpath_list = []
+    for i in range(len(rel_path_list)): #per .las data file
+        las_file_path = las_data_basepath.joinpath(rel_path_list[i])
+        print(str(las_file_path))
+        # print_las_info(las_file_path)
+        ply_file_path = codes_data_basepath.joinpath(las_file_path.parts[-2]).joinpath(forest_region_list[i] + "_" + las_file_path.stem + "_" + split_list[i] + ".ply")
+        ply_file_path_datanamechange = las_to_ply(las_file_path, ply_file_path, remove_ground, remove_lowveg, remove_outpoints)
+        if split_list[i]=="test":
+            testpath_list.append(str(ply_file_path_datanamechange))
+
+    print(testpath_list) #list of paths of all files used as test files -> can be used for fold in conf/eval.yaml
