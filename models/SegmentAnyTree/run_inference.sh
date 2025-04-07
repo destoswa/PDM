@@ -32,7 +32,8 @@ if [[ "$DEST_DIR" != /* ]]; then
 fi
 
 # Set the script directory and add it to the PYTHONPATH
-SCRIPT_DIR="/home/nibio/mutable-outside-world"
+# SCRIPT_DIR="/home/nibio/mutable-outside-world"
+SCRIPT_DIR="/home/pdm/models/SegmentAnyTree"
 export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
 
 # Print the input and output directories

@@ -8,6 +8,8 @@ from torch.utils.data import DataLoader
 from src.utils import *
 from models.model import KDE_cls_model
 from time import time
+from omegaconf import OmegaConf
+import argparse
 
 
 # ===================================================
@@ -28,7 +30,7 @@ SRC_INF_ROOT = "./inference/"
 SRC_INF_DATA = SRC_INF_ROOT + "data/"
 SRC_MODEL = "./models/pretrained/model_KDE.tar"
 INFERENCE_FILE = "modeltrees_inference.csv"
-with open(SRC_INF_ROOT + 'modeltrees_shape_names.txt', 'r') as f:
+with open('./inference/modeltrees_shape_names.txt', 'r') as f:
     SAMPLE_LABELS = f.read().splitlines()
 
 # ===================================================
@@ -43,8 +45,8 @@ for idx, cls in enumerate(SAMPLE_LABELS):
 def inference(args):
     print("Loading model...")
     conf = {
-        "num_class": args['num_class'],
-        "grid_dim": args['grid_size'],
+        "num_class": args['inference']['num_class'],
+        "grid_dim": args['inference']['grid_size'],
     }
 
     # load the model
@@ -61,17 +63,31 @@ def inference(args):
             os.mkdir("./inference/results/" + cls)
 
     # preprocess the samples
-    if args['do_preprocess']:
-        lst_files_to_process = ['data/' + cls for cls in os.listdir(SRC_INF_DATA)]
+    if args['inference']['do_preprocess']:
+        lst_files_to_process = ['data/' + cls for cls in os.listdir(args['inference']['src_data'])]
         df_files_to_process = pd.DataFrame(lst_files_to_process, columns=['data'])
         df_files_to_process['label'] = 0
-        df_files_to_process.to_csv(SRC_INF_ROOT + INFERENCE_FILE, sep=';', index=False)
+        df_files_to_process.to_csv(args['inference']['src_root_data'] + INFERENCE_FILE, sep=';', index=False)
 
     # make the predictions
     print("making predictions...")
-    kde_transform = ToKDE(args['grid_size'], args['kernel_size'], args['num_repeat_kernel'])
-    inferenceSet = ModelTreesDataLoader(INFERENCE_FILE, SRC_INF_ROOT, split='inference', transform=None, do_update_caching=args['do_update_caching'], kde_transform=kde_transform)
-    inferenceDataLoader = DataLoader(inferenceSet, batch_size=args['batch_size'], shuffle=False, num_workers=args['num_workers'], pin_memory=True)
+    kde_transform = ToKDE(
+        args['inference']['grid_size'], 
+        args['inference']['kernel_size'], 
+        args['inference']['num_repeat_kernel'],
+        )
+    inferenceSet = ModelTreesDataLoader(INFERENCE_FILE, 
+                                        args['inference']['src_root_data'], 
+                                        split='inference', 
+                                        transform=None, 
+                                        do_update_caching=args['inference']['do_update_caching'],
+                                        kde_transform=kde_transform,
+                                        )
+    inferenceDataLoader = DataLoader(inferenceSet, 
+                                     batch_size=args['inference']['batch_size'], 
+                                     shuffle=False, num_workers=args['inference']['num_workers'], 
+                                     pin_memory=True,
+                                     )
     df_predictions = pd.DataFrame(columns=["file_name", "class"])
 
     for batch_id, data in tqdm(enumerate(inferenceDataLoader, 0), total=len(inferenceDataLoader), smoothing=0.9):
@@ -91,20 +107,34 @@ def inference(args):
             df_predictions.loc[len(df_predictions)] = [fn, pred.item()]
 
     # save results in csv file
-    df_predictions.to_csv(SRC_INF_ROOT + 'results/results.csv', sep=';', index=False)
+    df_predictions.to_csv(args['inference']['src_root_data'] + 'results/results.csv', sep=';', index=False)
 
 
 def main():
-    args = {
-        'do_preprocess': do_preprocess,
-        'do_update_caching': do_update_caching,
-        'grid_size': grid_size,
-        'num_class': num_class,
-        'kernel_size': kernel_size,
-        'num_repeat_kernel': num_repeat_kernel,
-        'batch_size': batch_size,
-        'num_workers': num_workers,
-    }
+    # args = {
+    #     'src_root_data': SRC_INF_ROOT,
+    #     'src_data': SRC_INF_DATA,
+    #     'do_preprocess': do_preprocess,
+    #     'do_update_caching': do_update_caching,
+    #     'grid_size': grid_size,
+    #     'num_class': num_class,
+    #     'kernel_size': kernel_size,
+    #     'num_repeat_kernel': num_repeat_kernel,
+    #     'batch_size': batch_size,
+    #     'num_workers': num_workers,
+    # }
+    args = OmegaConf.load('./config/inference.yaml')
+    parser = argparse.ArgumentParser(description="Classify tree prediction based on lidar data")
+    parser.add_argument('--src_root_data', type=str, default=None)
+    parser.add_argument('--src_data', type=str, default=None)
+    args_modif = parser.parse_args()
+    print("AAARGS", args)
+    print("AAARGS2", args_modif)
+    if args_modif.src_root_data != None:
+        args.inference.src_root_data = args_modif.src_root_data
+    if args_modif.src_data != None:
+        args.inference.src_data = args_modif.src_data
+    print("AAAARGS3: ", args)
     inference(args)
 
 

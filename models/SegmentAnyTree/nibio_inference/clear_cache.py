@@ -11,7 +11,7 @@ with open(args.eval_yaml) as f:
 
 # go to checkpoint_dir and '.hydra' folder and open overrides.yaml and find data.dataroot there
 
-with open(os.path.join(data['checkpoint_dir'], '.hydra/overrides.yaml')) as f:
+with open(os.path.join(data['checkpoint_dir'].replace('nibio/mutable-outside-world', 'pdm/models/SegmentAnyTree'), '.hydra/overrides.yaml')) as f:
     data = yaml.load(f, Loader=yaml.FullLoader)
 
 for item in data:

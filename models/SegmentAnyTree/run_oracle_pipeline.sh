@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+DOCKER_IN_FOLDER="$1"
+DOCKER_OUT_FOLDER="$2"
+
 # Set DEBUG_MODE (change this to true or false as needed, DEBUG is for local testing, false is for running on the oracle)
 DEBUG_MODE=true
 # DEBUG_MODE=false
@@ -13,6 +16,10 @@ DEBUG_MODE=true
 # fi
 
 PATH_DATA='/home/datascience'
+# re
+if [ -d "$PATH_DATA" ]; then
+    rm -rf "$PATH_DATA"
+fi
 
 # Set the input and output folders in the oracle
 ORACLE_IN_DATA_FOLDER="$PATH_DATA/docker_in_folder" # This is the folder where the input data is stored on the oracle
@@ -22,8 +29,10 @@ TMP_IN_DATA_FOLDER="$PATH_DATA/tmp_in_folder" # This is the folder where the inp
 TMP_OUT_DATA_FOLDER="$PATH_DATA/tmp_out_folder" # This is the folder where the output data is stored on the oracle temporarily
 
 # Set the input and output folders which mimic the bucket
-DOCKER_IN_FOLDER='/home/nibio/mutable-outside-world/bucket_in_folder' # this just mimics the input bucket
-DOCKER_OUT_FOLDER='/home/nibio/mutable-outside-world/bucket_out_folder' # this just mimics the output bucket
+# DOCKER_IN_FOLDER='/home/nibio/mutable-outside-world/bucket_in_folder' # this just mimics the input bucket
+# DOCKER_OUT_FOLDER='/home/nibio/mutable-outside-world/bucket_out_folder' # this just mimics the output bucket
+# DOCKER_IN_FOLDER='/home/pdm/data/dataset_tiles_100m/tiles_one' # this just mimics the input bucket
+# DOCKER_OUT_FOLDER='/home/pdm/data/dataset_tiles_100m/tiles_one' # this just mimics the output bucket
 
 # function to read the input from the oracle
 run_oracle_wrapper_input() {

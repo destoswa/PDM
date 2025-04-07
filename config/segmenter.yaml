@@ -1,0 +1,4 @@
+segmenter:
+  root_src: /home/pdm/models/SegmentAnyTree/
+  data_src: data/dataset_tiles_100m/tiles_one/
+  data_preds: data/dataset_tiles_100m/tiles_one/preds/

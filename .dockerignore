@@ -1,0 +1,29 @@
+# add data folder
+/data_bucket/
+/data/
+/models/SegmentAnyTree/data/
+/models/SegmentAnyTree/processed_data_full/
+/models/SegmentAnyTree/processed_data_ready_for_training/
+/models/SegmentAnyTree/processed_data_ready_for_training_sparse_1000/
+/models/SegmentAnyTree/models/SegmentAnyTree/processed_data_ready_for_training_sparse_1000_500_100_10/processed_0.2_test/
+/models/SegmentAnyTree/B_temp_folder/
+/models/SegmentAnyTree/sample_test_data/
+/models/SegmentAnyTree/small_data_for_test/
+# /processed_data_ready_for_training_sparse_1000_500_100_10/
+/models/SegmentAnyTree/outputs/from_gpu26/
+# !/outputs/from_gpu26/mls_data_run-PointGroup-PAPER-20230922_083127
+/models/SegmentAnyTree/bucket_in_folder/
+/models/SegmentAnyTree/bucket_out_folder/
+/models/SegmentAnyTree/docker_in_folder/
+/models/SegmentAnyTree/docker_out_folder/
+/models/SegmentAnyTree/for_instance_no_outer_sparse_many_times/
+/models/SegmentAnyTree/for_instance_no_outer_sparse/
+/models/SegmentAnyTree/maciek/
+/models/SegmentAnyTree/data_for_test_results_final/
+/models/SegmentAnyTree/data_for_test/
+/models/SegmentAnyTree/outputs/from_gpu26/mls_data_run-PointGroup-PAPER-20230922_083127/eval/
+/models/SegmentAnyTree/processed_data_ready_for_training_sparse_1000_500_100_10/treeinsfused/processed_0.2_test/
+/models/SegmentAnyTree/temp_folder/
+/models/SegmentAnyTree/helios_for_instance/
+/models/SegmentAnyTree/Stefano/
+

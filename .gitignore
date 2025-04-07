@@ -1,3 +1,4 @@
 data/*
 *.tar
 *.pt
+models/SegmentAnyTree/model_file/*

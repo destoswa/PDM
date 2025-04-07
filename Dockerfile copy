@@ -1,8 +1,5 @@
 FROM nvidia/cuda:11.1.1-cudnn8-devel-ubuntu20.04 AS builder
 
-# Ensure we use bash for all RUN commands
-SHELL ["/bin/bash", "-c"]
-
 RUN ln -fs /usr/share/zoneinfo/Europe/Oslo /etc/localtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -17,7 +14,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ssh \
     sudo \
     vim \
-    zip \
     wget \
     unzip \
     less \
@@ -38,27 +34,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Miniconda
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /miniconda.sh && \
-    bash /miniconda.sh -b -p /opt/conda && \
-    rm /miniconda.sh
+bash /miniconda.sh -b -p /opt/conda && \
+rm /miniconda.sh
 
 # Set up conda environment variables
 ENV PATH="/opt/conda/bin:${PATH}"
 ENV CONDA_AUTO_UPDATE_CONDA=false
 
 # Create and activate a conda environment for PDAL
-RUN conda create -y -n pdal_env -c conda-forge python=3.8 pdal python-pdal && conda clean --all -y
-
-# Ensure Conda activates automatically for interactive shells
-RUN echo "source activate pdal_env" >> ~/.bashrc
-
-# Set Conda environment as default
+RUN conda create -y -n pdal_env -c conda-forge python=3.8 python-pdal && conda clean --all -y
 ENV CONDA_DEFAULT_ENV=pdal_env
 ENV CONDA_PREFIX=/opt/conda/envs/pdal_env
 ENV PATH="${CONDA_PREFIX}/bin:${PATH}"
 
-# Install dependencies inside the Conda environment
-# RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade pip \
-#     && conda run -n pdal_env python -m pip install autopep8 doc8 ipython pandas tqdm
 RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade \
     autopep8==1.5.7 \
     doc8==0.8.1 \
@@ -75,14 +63,8 @@ RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade \
     tqdm==4.62.3 \
     wheel==0.37.0
 
-# Set up GPU-related environment variables
 ENV CU_VERSION=cu111
 ENV TORCH_CUDA_ARCH_LIST_VER="6.0;7.0;7.5;8.0;8.6"
-
-# Install PyTorch and dependencies
-# RUN conda run -n pdal_env python -m pip install \
-#     torch==1.9.0+${CU_VERSION} torchvision==0.10.0+${CU_VERSION} torchaudio==0.9.0 \
-#     -f https://download.pytorch.org/whl/torch_stable.html
 
 RUN conda run -n pdal_env python -m pip install --no-cache-dir \
     torch==1.9.0+${CU_VERSION} \
@@ -163,7 +145,7 @@ RUN TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST_VER} FORCE_CUDA=1 conda run -n p
     jupyterlab-pygments==0.1.2 \
     jupyterlab-widgets==1.0.2 \
     kiwisolver==1.3.2 \
-    # laspy==2.0.3 \
+    laspy==2.0.3 \
     llvmlite==0.33.0 \
     markdown==3.3.4 \
     markupsafe==2.0.1 \
@@ -245,13 +227,6 @@ RUN TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST_VER} FORCE_CUDA=1 conda run -n p
     widgetsnbextension==3.5.1 \
     zipp==3.5.0
 
-
-# Install laspy (with laz compatibility)
-RUN apt update && apt install -y curl
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
-RUN export PATH=$PATH:~/.cargo/bin/
-RUN conda run -n pdal_env python -m pip install laspy[lazrs]==2.0.3
-
 RUN conda run -n pdal_env python -m pip install cython==0.29.37
 RUN wget https://github.com/scikit-learn-contrib/hdbscan/archive/refs/tags/0.8.29.zip && \
     unzip 0.8.29.zip && \
@@ -259,16 +234,48 @@ RUN wget https://github.com/scikit-learn-contrib/hdbscan/archive/refs/tags/0.8.2
     cd hdbscan-0.8.29 && \
     python3.8 -m pip install -r requirements.txt && \
     python3.8 setup.py install
-    
-RUN conda run -n pdal_env python -m pip install --no-cache-dir \
-    numba==0.57.1 \
-    numpy==1.24.4 \
-    jaklas \
-    dask==2021.8.1 \
-    pykdtree==1.3.7.post0
-# Set bash as the default entrypoint to ensure Conda activation
-ENTRYPOINT ["/bin/bash", "--login"]
 
-# Create a working directory
+# Clean up unnecessary files and caches
+RUN apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    find /usr/local -depth \
+    \( \
+      \( -type d -a -name test -o -name tests \) \
+      -o \
+      \( -type f -a -name '*.pyc' -o -name '*.pyo' \) \
+    \) -exec rm -rf '{}' + ;
+
+# Stage 2: Final stage
 RUN mkdir /home/pdm/
 WORKDIR /home/pdm
+# FROM nvidia/cuda:11.1.1-cudnn8-devel-ubuntu20.04 AS final
+
+# RUN ln -fs /usr/share/zoneinfo/Europe/Oslo /etc/localtime
+
+# COPY --from=builder /usr/local/bin /usr/local/bin
+# COPY --from=builder /usr/local/lib /usr/local/lib
+# COPY --from=builder /usr/local/include /usr/local/include
+
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     libopenblas-base \
+#     python3.8 \
+#     python3.8-dev \
+#     python3-pip \
+#     wget \
+#     unzip \
+#     zip \
+#     && rm -rf /var/lib/apt/lists/*
+
+# RUN python3.8 -m pip install --no-cache-dir \
+#     numba==0.57.1 \
+#     numpy==1.24.4 \
+#     jaklas \
+#     dask==2021.8.1 \
+#     pykdtree==1.3.7.post0
+
+# RUN mkdir -p /home/datascience
+
+# COPY . /home/nibio/mutable-outside-world
+# WORKDIR /home/nibio/mutable-outside-world
+
+# ENTRYPOINT ["bash", "run_oracle_pipeline.sh"]

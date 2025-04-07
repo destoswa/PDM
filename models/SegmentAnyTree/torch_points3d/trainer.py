@@ -76,7 +76,7 @@ class Trainer:
             Wandb.launch(self._cfg, self._cfg.training.wandb.public and self.wandb_log)
 
         # Checkpoint
-
+        print("CONFIG CHECKPOINT DIR: ", self._cfg.training.checkpoint_dir)
         self._checkpoint: ModelCheckpoint = ModelCheckpoint(
             self._cfg.training.checkpoint_dir,
             self._cfg.model_name,

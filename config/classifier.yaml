@@ -1,0 +1,11 @@
+classifier:
+  'src_root_data': ./inference/
+  'src_data': ./inference/data/
+  'do_preprocess': True
+  'do_update_caching': True
+  'grid_size': 64
+  'num_class': 3
+  'kernel_size': 1
+  'num_repeat_kernel': 2
+  'batch_size': 12
+  'num_workers': 12
