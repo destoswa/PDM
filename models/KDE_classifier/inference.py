@@ -56,11 +56,16 @@ def inference(args):
     model.eval()
 
     # create the folders for results
-    if not os.path.isdir("./inference/results/"):
-        os.mkdir("./inference/results")
+    # if not os.path.isdir("./inference/results/"):
+    #     os.mkdir("./inference/results")
+    # for cls in SAMPLE_LABELS:
+    #     if not os.path.isdir("./inference/results/" + cls):
+    #         os.mkdir("./inference/results/" + cls)
+    if not os.path.isdir(os.path.normpath(args['inference']['src_root_data']) + '/results'):
+        os.mkdir(os.path.normpath(args['inference']['src_root_data']) + '/results')
     for cls in SAMPLE_LABELS:
-        if not os.path.isdir("./inference/results/" + cls):
-            os.mkdir("./inference/results/" + cls)
+        if not os.path.isdir(os.path.normpath(args['inference']['src_root_data']) + '/results/' + cls):
+            os.mkdir(os.path.normpath(args['inference']['src_root_data']) + '/results/' + cls)
 
     # preprocess the samples
     if args['inference']['do_preprocess']:
@@ -101,9 +106,17 @@ def inference(args):
 
         # copy samples into right result folder
         for idx, pred in enumerate(pred_choice):
+            # fn = filenames[idx].replace('.pickle', '')
+            # print('FN: ', fn)
+            # dest = "inference/results/" + dict_labels[pred.item()] + "/" + fn.replace('data/', "")
+            # print('DEST: ', dest)
+            # shutil.copyfile(os.path.abspath('inference/' + fn), os.path.abspath(dest))
+            # df_predictions.loc[len(df_predictions)] = [fn, pred.item()]
             fn = filenames[idx].replace('.pickle', '')
-            dest = "inference/results/" + dict_labels[pred.item()] + "/" + fn.replace('data/', "")
-            shutil.copyfile(os.path.abspath('inference/' + fn), os.path.abspath(dest))
+            print('FN: ', fn)
+            dest = os.path.normpath(args['inference']['src_root_data']) + '/results/' + dict_labels[pred.item()] + "/" + fn.replace('data/', "")
+            print('DEST: ', dest)
+            shutil.copyfile(os.path.normpath(args['inference']['src_root_data']) + '/' + fn, dest)
             df_predictions.loc[len(df_predictions)] = [fn, pred.item()]
 
     # save results in csv file

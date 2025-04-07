@@ -7,5 +7,5 @@ inference:
   num_class: 3
   kernel_size: 1
   num_repeat_kernel: 2
-  batch_size: 12
-  num_workers: 12
+  batch_size: 4
+  num_workers: 4

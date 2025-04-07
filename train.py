@@ -19,10 +19,7 @@ def main(cfg):
     pipeline = Pipeline(cfg)    
 
     # segment
-    # pipeline.segment()
-
-
-    
+    pipeline.segment()
 
     # classify
     pipeline.classify()

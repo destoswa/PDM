@@ -213,18 +213,6 @@ class Pipeline():
         # self.source_preds_classifier = self.arg.classifier.data_src
         file_format = self.cfg.dataset.file_format
 
-        # # prepare data
-        # if file_format != 'pcd':
-        #     print("Converting data into pcd..")
-        #     convert_all_in_folder(
-        #         src_folder_in=self.cfg.segmenter.data_preds, 
-        #         src_folder_out=os.path.normpath(self.cfg.segmenter.data_preds) + "/converted", 
-        #         in_type=file_format, 
-        #         out_type='pcd'
-        #         )
-        #     data_src = os.path.normpath(self.cfg.segmenter.data_preds) + "/converted"
-        #     self.cfg.dataset.data_src = data_src
-
         # loop on files:
         for file in os.listdir(self.cfg.segmenter.data_preds):
             if file.endswith(self.cfg.dataset.file_format):
@@ -235,7 +223,7 @@ class Pipeline():
                 dir_target = os.path.dirname(os.path.join(self.cfg.segmenter.data_preds, file)) + '/' + os.path.join(self.cfg.segmenter.data_preds, file).split('/')[-1].split('.')[0] + "_split_instance"
                 convert_all_in_folder(
                     src_folder_in=dir_target, 
-                    src_folder_out=os.path.normpath(dir_target) + "/converted", 
+                    src_folder_out=os.path.normpath(dir_target) + "/data", 
                     in_type=file_format, 
                     out_type='pcd'
                     )
@@ -245,10 +233,9 @@ class Pipeline():
                     src_script="/home/pdm/models/KDE_classifier/",
                     script_name="./run_inference.sh",
                     params= [os.path.normpath(self.project_root_src) + '/' + dir_target + '/',
-                            os.path.normpath(self.project_root_src) + '/' + os.path.normpath(dir_target) + "/converted/",
+                            os.path.normpath(self.project_root_src) + '/' + os.path.normpath(dir_target) + "/data/",
                             ],
                     )
-
 
     def prepare_gt(self):
         assert self.source_preds_classifier != None
