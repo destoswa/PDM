@@ -1,0 +1,422 @@
+job_name: treeins_my_first_run
+model_name: PointGroup-PAPER
+update_lr_scheduler_on: on_epoch
+selection_stage: ''
+pretty_print: false
+eval_frequency: 1
+tracker_options:
+  full_res: false
+  make_submission: false
+  track_boxes: false
+task:
+  defaults:
+  - /task/default
+  - override /data@_group_: panoptic/default
+  - override /models@_group_: panoptic/default
+  name: panoptic
+visualization:
+  activate: true
+  format: pointcloud
+  num_samples_per_epoch: 10
+  deterministic: true
+  saved_keys:
+    pos:
+    - - x
+      - float
+    - - 'y'
+      - float
+    - - z
+      - float
+    'y':
+    - - l
+      - float
+    pred:
+    - - p
+      - float
+lr_scheduler:
+  class: ExponentialLR
+  params:
+    gamma: 0.9885
+epochs: 102
+num_workers: 0
+batch_size: 2
+shuffle: true
+cuda: 0
+precompute_multi_scale: false
+optim:
+  base_lr: 0.001
+  grad_clip: -1
+  optimizer:
+    class: Adam
+    params:
+      lr: ${training.optim.base_lr}
+      weight_decay: 0
+  lr_scheduler: ${lr_scheduler}
+  bn_scheduler:
+    bn_policy: step_decay
+    params:
+      bn_momentum: 0.1
+      bn_decay: 0.5
+      decay_step: 20
+      bn_clip: 0.01
+weight_name: latest
+enable_cudnn: true
+checkpoint_dir: /home/pdm/models/SegmentAnyTree/model_file
+wandb:
+  entity: maciej-wielgosz-nibio
+  project: test
+  log: false
+  notes: treeins
+  name: pdm_pipeline_test
+  id: null
+  public: true
+  config:
+    grid_size: ${data.grid_size}
+tensorboard:
+  log: false
+debugging:
+  find_neighbour_dist: false
+  num_batches: 50
+  early_break: false
+  profiling: false
+models:
+  PointGroup:
+    class: PointGroup3heads.PointGroup3heads
+    conv_type: SPARSE
+    scorer_type: unet
+    loss_weights:
+      semantic: 1
+      offset_norm_loss: 0.1
+      offset_dir_loss: 0.1
+      score_loss: 1
+      embedding_loss: 1
+    backbone:
+      architecture: unet
+    scorer_unet:
+      class: minkowski.Minkowski_Model
+      conv_type: SPARSE
+      define_constants:
+        in_feat: 96
+      down_conv:
+        module_name: ResNetDown
+        dimension: 3
+        down_conv_nn:
+        - - in_feat
+          - 2*in_feat
+        - - 2*in_feat
+          - 4*in_feat
+        kernel_size: 3
+        stride: 2
+        'N': 1
+      up_conv:
+        module_name: ResNetUp
+        dimension: 3
+        up_conv_nn:
+        - - 4*in_feat
+          - 2*in_feat
+        - - 2*in_feat+ 2*in_feat
+          - in_feat
+        kernel_size: 3
+        stride: 2
+        'N': 1
+    scorer_encoder:
+      class: minkowski.Minkowski_Model
+      conv_type: SPARSE
+      define_constants:
+        in_feat: 96
+      down_conv:
+        module_name: ResNetDown
+        dimension: 3
+        down_conv_nn:
+        - - in_feat
+          - 2*in_feat
+        - - 2*in_feat
+          - 4*in_feat
+        kernel_size: 3
+        stride: 2
+        'N': 1
+      innermost:
+        module_name: GlobalBaseModule
+        activation:
+          name: LeakyReLU
+          negative_slope: 0.2
+        aggr: max
+        nn:
+        - 4*in_feat
+        - in_feat
+    prepare_epoch: 120
+    cluster_radius_search: 1.5 * ${data.grid_size}
+    min_iou_threshold: 0.25
+    max_iou_threshold: 0.75
+    vizual_ratio: 0
+  PointGroup-PAPER:
+    class: PointGroup3heads.PointGroup3heads
+    conv_type: SPARSE
+    scorer_type: unet
+    use_score_net: true
+    mask_supervise: false
+    use_mask_filter_score_feature: false
+    use_mask_filter_score_feature_start_epoch: 50
+    mask_filter_score_feature_thre: 0.5
+    cal_iou_based_on_mask: false
+    cal_iou_based_on_mask_start_epoch: 50
+    loss_weights:
+      semantic: 1
+      offset_norm_loss: 0.1
+      offset_dir_loss: 0.1
+      score_loss: 1
+      mask_loss: 1
+      embedding_loss: 1
+    bandwidth: 0.6
+    embed_dim: 5
+    feat_size: 16
+    backbone:
+      architecture: unet
+      config:
+        class: minkowski.Minkowski_Model
+        conv_type: SPARSE
+        define_constants:
+          in_feat: ${models.PointGroup-PAPER.feat_size}
+        down_conv:
+          module_name: ResNetDown
+          dimension: 3
+          down_conv_nn:
+          - - FEAT
+            - in_feat
+          - - in_feat
+            - 2*in_feat
+          - - 2*in_feat
+            - 3*in_feat
+          - - 3*in_feat
+            - 4*in_feat
+          - - 4*in_feat
+            - 5*in_feat
+          - - 5*in_feat
+            - 6*in_feat
+          - - 6*in_feat
+            - 7*in_feat
+          kernel_size: 3
+          stride:
+          - 1
+          - 2
+          - 2
+          - 2
+          - 2
+          - 2
+          - 2
+          'N': 2
+        up_conv:
+          module_name: ResNetUp
+          dimension: 3
+          up_conv_nn:
+          - - 7*in_feat
+            - 6*in_feat
+          - - 2*6*in_feat
+            - 5*in_feat
+          - - 2*5*in_feat
+            - 4*in_feat
+          - - 2*4*in_feat
+            - 3*in_feat
+          - - 2*3*in_feat
+            - 2*in_feat
+          - - 2*2*in_feat
+            - in_feat
+          - - 2*in_feat
+            - in_feat
+          kernel_size: 3
+          stride:
+          - 2
+          - 2
+          - 2
+          - 2
+          - 2
+          - 2
+          - 1
+          'N': 2
+    scorer_unet:
+      class: minkowski.Minkowski_Model
+      conv_type: SPARSE
+      define_constants:
+        in_feat: ${models.PointGroup-PAPER.feat_size}
+      down_conv:
+        module_name: ResNetDown
+        dimension: 3
+        down_conv_nn:
+        - - in_feat
+          - 2*in_feat
+        - - 2*in_feat
+          - 4*in_feat
+        kernel_size: 3
+        stride: 2
+        'N': 2
+      up_conv:
+        module_name: ResNetUp
+        dimension: 3
+        up_conv_nn:
+        - - 4*in_feat
+          - 2*in_feat
+        - - 4*in_feat
+          - in_feat
+        kernel_size: 3
+        stride: 2
+        'N': 2
+    scorer_encoder:
+      class: minkowski.Minkowski_Model
+      conv_type: SPARSE
+      define_constants:
+        in_feat: ${models.PointGroup-PAPER.feat_size}
+      down_conv:
+        module_name: ResNetDown
+        dimension: 3
+        down_conv_nn:
+        - - in_feat
+          - 2*in_feat
+        - - 2*in_feat
+          - 4*in_feat
+        kernel_size: 3
+        stride: 2
+        'N': 2
+      innermost:
+        module_name: GlobalBaseModule
+        activation:
+          name: LeakyReLU
+          negative_slope: 0.2
+        aggr: max
+        nn:
+        - 4*in_feat
+        - in_feat
+    prepare_epoch: 30
+    cluster_radius_search: 1.5 * ${data.grid_size}
+    min_iou_threshold: 0.25
+    max_iou_threshold: 0.75
+    cluster_type: 5
+    vizual_ratio: 0
+data:
+  defaults:
+  - panoptic/default
+  task: panoptic
+  class: treeins.TreeinsFusedDataset
+  dataroot: /home/pdm/data/FORinstance_dataset
+  forest_regions: []
+  fold: []
+  first_subsampling: 0.2
+  radius: 8
+  grid_size: ${data.first_subsampling}
+  keep_instance: true
+  use_category: false
+  sampling_format: cylinder
+  mode: last
+  pre_collate_transform:
+  - transform: SaveOriginalPosId
+  - transform: GridSampling3D
+    params:
+      size: ${data.first_subsampling}
+      mode: ${data.mode}
+  train_transforms:
+  - transform: RandomNoise
+    params:
+      sigma: 0.01
+  - transform: RandomRotate
+    params:
+      degrees: 180
+      axis: 2
+  - transform: RandomScaleAnisotropic
+    params:
+      scales:
+      - 0.9
+      - 1.1
+  - transform: RandomSymmetry
+    params:
+      axis:
+      - true
+      - false
+      - false
+  - transform: XYZRelaFeature
+    params:
+      add_x: true
+      add_y: true
+      add_z: true
+  - transform: XYZFeature
+    params:
+      add_x: false
+      add_y: false
+      add_z: true
+  - transform: AddFeatsByKeys
+    params:
+      list_add_to_x:
+      - true
+      - true
+      - true
+      - true
+      feat_names:
+      - pos_x_rela
+      - pos_y_rela
+      - pos_z_rela
+      - pos_z
+      delete_feats:
+      - true
+      - true
+      - true
+      - true
+  - transform: Center
+  - transform: GridSampling3D
+    params:
+      size: ${data.first_subsampling}
+      quantize_coords: true
+      mode: ${data.mode}
+  - transform: ShiftVoxels
+  test_transform:
+  - transform: XYZRelaFeature
+    params:
+      add_x: true
+      add_y: true
+      add_z: true
+  - transform: XYZFeature
+    params:
+      add_x: false
+      add_y: false
+      add_z: true
+  - transform: AddFeatsByKeys
+    params:
+      list_add_to_x:
+      - true
+      - true
+      - true
+      - true
+      feat_names:
+      - pos_x_rela
+      - pos_y_rela
+      - pos_z_rela
+      - pos_z
+      delete_feats:
+      - true
+      - true
+      - true
+      - true
+  - transform: Center
+  - transform: GridSampling3D
+    params:
+      size: ${data.first_subsampling}
+      quantize_coords: true
+      mode: ${data.mode}
+  val_transform: ${data.test_transform}
+sota:
+  s3dis5:
+    miou: 67.1
+    mrec: 72.8
+  s3dis:
+    acc: 88.2
+    macc: 81.5
+    miou: 70.6
+  scannet:
+    miou: 72.5
+  semantic3d:
+    miou: 76.0
+    acc: 94.4
+  semantickitti:
+    miou: 50.3
+  modelnet40:
+    acc: 92.9
+  shapenet:
+    mciou: 85.1
+    miou: 86.4

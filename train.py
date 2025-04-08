@@ -13,16 +13,22 @@ def main(cfg):
     # load data
     data_src = cfg.dataset.data_src
     # print(OmegaConf.to_yaml(cfg))
-    print(data_src)
 
     # create pipeline
     pipeline = Pipeline(cfg)    
 
     # segment
-    pipeline.segment()
+    # pipeline.segment()
+    return
 
     # classify
-    pipeline.classify()
+    # pipeline.classify()
+
+    # create pseudo-labels
+    # pipeline.create_pseudo_labels()
+
+    # train
+    pipeline.train()
 
     # visualization
 
@@ -30,8 +36,8 @@ def main(cfg):
 if __name__ == "__main__":
     cfg_dataset = OmegaConf.load('./config/dataset.yaml')
     cfg_preprocess = OmegaConf.load('./config/preprocessing.yaml')
-    cfg_training = OmegaConf.load('./config/training.yaml')
+    cfg_pipeline = OmegaConf.load('./config/pipeline.yaml')
     cfg_classifier = OmegaConf.load('./config/classifier.yaml')
     cfg_segmenter = OmegaConf.load('./config/segmenter.yaml')
-    cfg = OmegaConf.merge(cfg_dataset, cfg_preprocess, cfg_training, cfg_classifier, cfg_segmenter)
+    cfg = OmegaConf.merge(cfg_dataset, cfg_preprocess, cfg_pipeline, cfg_classifier, cfg_segmenter)
     main(cfg)

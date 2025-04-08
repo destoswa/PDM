@@ -1,4 +1,14 @@
 segmenter:
-  root_src: /home/pdm/models/SegmentAnyTree/
+  root_model_src: /home/pdm/models/SegmentAnyTree/
   data_src: data/dataset_tiles_100m/tiles_one/
-  data_preds: data/dataset_tiles_100m/tiles_one/preds/
+  inference:
+    data_preds: data/dataset_tiles_100m/tiles_one/preds/
+    model_checkpoint_src: None
+    config_eval_src: /home/pdm/models/SegmentAnyTree/conf/eval.yaml
+  training:
+    data_train: data/FORinstance_dataset
+    config_data_src: /home/pdm/models/SegmentAnyTree/conf/data/panoptic/treeins_rad8.yaml
+    config_results_src: /home/pdm/models/SegmentAnyTree/conf/hydra/output/custom.yaml
+    result_training_dir: results/trainings
+    result_src_name_suffixe: test
+    result_src_full_name: None

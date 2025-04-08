@@ -12,7 +12,7 @@ def main(cfg):
     OmegaConf.set_struct(cfg, False)  # This allows getattr and hasattr methods to function correctly
     if cfg.pretty_print:
         print(OmegaConf.to_yaml(cfg))
-
+    setattr(cfg, 'is_training',True)
     trainer = Trainer(cfg)
     trainer.train()
     #

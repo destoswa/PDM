@@ -113,14 +113,15 @@ def inference(args):
             # shutil.copyfile(os.path.abspath('inference/' + fn), os.path.abspath(dest))
             # df_predictions.loc[len(df_predictions)] = [fn, pred.item()]
             fn = filenames[idx].replace('.pickle', '')
-            print('FN: ', fn)
             dest = os.path.normpath(args['inference']['src_root_data']) + '/results/' + dict_labels[pred.item()] + "/" + fn.replace('data/', "")
-            print('DEST: ', dest)
             shutil.copyfile(os.path.normpath(args['inference']['src_root_data']) + '/' + fn, dest)
             df_predictions.loc[len(df_predictions)] = [fn, pred.item()]
 
     # save results in csv file
     df_predictions.to_csv(args['inference']['src_root_data'] + 'results/results.csv', sep=';', index=False)
+
+    # Remove temp folder
+    inferenceSet.clean_temp()
 
 
 def main():
@@ -141,13 +142,10 @@ def main():
     parser.add_argument('--src_root_data', type=str, default=None)
     parser.add_argument('--src_data', type=str, default=None)
     args_modif = parser.parse_args()
-    print("AAARGS", args)
-    print("AAARGS2", args_modif)
     if args_modif.src_root_data != None:
         args.inference.src_root_data = args_modif.src_root_data
     if args_modif.src_data != None:
         args.inference.src_data = args_modif.src_data
-    print("AAAARGS3: ", args)
     inference(args)
 
 

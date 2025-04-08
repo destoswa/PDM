@@ -1,8 +1,8 @@
 # Ref: https://github.com/chrischoy/SpatioTemporalSegmentation/blob/master/config.py
 # @package training
-epochs: 2 #TO ADAPT: specify number of training epochs 150
+epochs: 102 #TO ADAPT: specify number of training epochs 150
 num_workers: 0
-batch_size: 4 #TO ADAPT: specify batch size
+batch_size: 2 #TO ADAPT: specify batch size
 shuffle: True
 cuda: 0
 precompute_multi_scale: False # Compute multiscate features on cpu for faster training / inference
@@ -32,9 +32,9 @@ checkpoint_dir: "/home/pdm/models/SegmentAnyTree/model_file"
 wandb:
   entity: "maciej-wielgosz-nibio" #TO ADAPT: change to your own wandb account name
   project: test 
-  log: True
+  log: False
   notes: "treeins"
-  name: "treeins" #TO ADAPT: specify name of experiment that will be shown on wandb
+  name: "pdm_pipeline_test" #TO ADAPT: specify name of experiment that will be shown on wandb
   id:
   public: True # It will be display the model within wandb log, else not.
   config:

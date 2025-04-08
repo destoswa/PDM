@@ -105,17 +105,15 @@ def convert_all_in_folder(src_folder_in, src_folder_out, in_type, out_type):
     if not hasattr(Convertions, f"convert_{in_type}_to_{out_type}"):
         print(f"No function for converting {in_type} into {out_type}!!")
         return
-    print(src_folder_out)
     os.makedirs(src_folder_out, exist_ok=True)  # Ensure output folder exists
     # if not os.path.exists(src_folder_out):
     #     os.mkdir(src_folder_out)
     files = [f for f in os.listdir(src_folder_in) if f.endswith(in_type)]
-    print("files", files)
 
     # with concurrent.futures.ThreadPoolExecutor() as executor:
     #     list(tqdm(executor.map(lambda f: process_file(f, src_folder_in, src_folder_out, in_type, out_type), files), total=len(files)))
 
-    for _, file in tqdm(enumerate(files), total=len(files)):
+    for _, file in tqdm(enumerate(files), total=len(files), desc=f"Converting {in_type} in {out_type}"):
         if file.endswith(in_type):
             file_out = file.split(in_type)[0] + out_type
             _ = getattr(Convertions, f"convert_{in_type}_to_{out_type}")(os.path.join(src_folder_in, file), os.path.join(src_folder_out, file_out), verbose=False)

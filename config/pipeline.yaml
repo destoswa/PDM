@@ -1,0 +1,3 @@
+pipeline:
+  root_src: /home/pdm
+  loop_iteration: 0

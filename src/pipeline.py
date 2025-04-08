@@ -7,26 +7,35 @@ import pdal
 import json
 import laspy
 import subprocess
+from datetime import datetime
 from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from functools import partial
+from omegaconf import OmegaConf
 from src.format_conversions import convert_all_in_folder
+from src.pseudo_labels_creation import update_attribute_where_cluster_match
 # from models.KDE_classifier.inference import inference
 
 
 class Pipeline():
     def __init__(self, cfg):
-        print(cfg.dataset.project_root_src)
         self.cfg = cfg
         self.project_root_src = cfg.dataset.project_root_src
-        self.segmenter_data_src = cfg.segmenter.data_src
-        self.segmenter_data_preds = cfg.segmenter.data_preds
+        self.data_src = cfg.dataset.data_src
+        self.file_format = cfg.dataset.file_format
+        self.segmenter_data_preds = cfg.segmenter.inference.data_preds
         self.cfg_classifier = cfg.classifier
         self.cfg_segmenter = cfg.segmenter
-        self.src_segment_model = cfg.segmenter.root_src
+        self.segmenter_data_src = cfg.segmenter.data_src
+        self.src_segment_model = cfg.segmenter.root_model_src
+        self.loop_iteration = cfg.pipeline.loop_iteration
         self.src_preds_segmenter = None
         self.src_preds_classifier = None
+        self.classified_clusters = None
+        self.model_checkpoint_src = cfg.segmenter.inference.model_checkpoint_src
 
     @staticmethod
-    def unzip_laz_files(zip_path, extract_to="."):
+    def unzip_laz_files(zip_path, extract_to=".", delete_zip=True):
         """Extract all .laz files from a zip archive to a target directory root.
 
         zip_path (str): Path to the .zip archive.
@@ -39,19 +48,19 @@ class Pipeline():
                 filename = os.path.basename(file)
                 with zip_ref.open(file) as source, open(os.path.join(extract_to, filename), 'wb') as target:
                     target.write(source.read())
+        if delete_zip:
+            os.remove(zip_path)
 
     @staticmethod
-    def run_subprocess(src_script, script_name, params=None):
+    def run_subprocess(src_script, script_name, params=None, verbose=True):
         # go at the root of the segmenter
         old_current_dir = os.getcwd()
         os.chdir(src_script)
-        print(os.getcwd())
 
         # construct command and run subprocess
         script_str = script_name
         if params:
-            script_str += ' ' + ' '.join(params)
-        print(script_str)
+            script_str += ' ' + ' '.join([str(x) for x in params])
         process = subprocess.Popen(
             script_str,
             stdout=subprocess.PIPE,
@@ -67,7 +76,7 @@ class Pipeline():
             if realtime_output == '' and process.poll() is not None:
                 break
 
-            if realtime_output:
+            if realtime_output and verbose:
                 print(realtime_output.strip(), flush=True)
 
         # Ensure the process has fully exited
@@ -79,7 +88,6 @@ class Pipeline():
 
     @staticmethod
     def split_instance(src_file_in, keep_ground=False, verbose=True):
-        print("src_file", src_file_in)
         # Define target folder:
         dir_target = os.path.dirname(src_file_in) + '/' + src_file_in.split('/')[-1].split('.')[0] + "_split_instance"
 
@@ -93,7 +101,6 @@ class Pipeline():
                 continue
             file_name = src_file_in.split('\\')[-1].split('/')[-1].split('.laz')[0] + f'_{instance}.laz'
             src_instance = os.path.join(dir_target, file_name)
-            print("src instance: ", src_instance)
 
             las = laspy.read(src_file_in)
 
@@ -190,8 +197,44 @@ class Pipeline():
         if verbose:
             print("SEMANTIC SPLITTING DONE")
 
+    @staticmethod
+    def change_var_val_yaml(src_yaml, var, val):
+        # load yaml file
+        yaml_raw = OmegaConf.load(src_yaml)
+        yaml = OmegaConf.create(yaml_raw)  # now data.first_subsampling works
+        
+        # find the correct variable to change
+        keys = var.split('/')
+        d = yaml
+        for key in keys[:-1]:
+            d = d.setdefault(key, {})  # ensures intermediate keys exist
+
+        # change value
+        d[keys[-1]] = val  # set the new value
+        
+        # save back to yaml file
+        OmegaConf.save(yaml, src_yaml)
+        
     def segment(self):
+        # self.src_preds_segmenter = os.path.normpath(self.segmenter_data_preds) + "/preds/"
+        # return
         print("Starting inference:")
+
+        # select checkpoint
+        print(self.model_checkpoint_src)
+        if self.model_checkpoint_src == "None":
+            Pipeline.change_var_val_yaml(
+                src_yaml=self.cfg_segmenter.inference.config_eval_src,
+                var="checkpoint_dir",
+                val="/home/pdm/models/SegmentAnyTree/model_file",
+            )
+        else:
+            Pipeline.change_var_val_yaml(
+                src_yaml=self.cfg_segmenter.inference.config_eval_src,
+                var="checkpoint_dir",
+                val=os.path.join(self.cfg.pipeline.root_src, self.model_checkpoint_src),
+            )
+        # return
         self.run_subprocess(
             src_script="/home/pdm/models/SegmentAnyTree/",
             script_name="./run_oracle_pipeline.sh",
@@ -205,22 +248,22 @@ class Pipeline():
             zip_path=os.path.join(self.project_root_src, self.segmenter_data_preds, "results.zip"),
             extract_to=os.path.normpath(self.project_root_src) + '/' + os.path.normpath(self.segmenter_data_preds),
             )
-        # self.src_preds_segmenter = self.data_src
+        self.src_preds_segmenter = os.path.normpath(self.segmenter_data_preds) + "/preds/"
         print("Segmentation done!")
     
     def classify(self):
+        print("Starting classification:")
         # inference(self.arg_classifier)
         # self.source_preds_classifier = self.arg.classifier.data_src
         file_format = self.cfg.dataset.file_format
 
         # loop on files:
-        for file in os.listdir(self.cfg.segmenter.data_preds):
+        for file in os.listdir(self.segmenter_data_preds):
             if file.endswith(self.cfg.dataset.file_format):
-                print(file)
-                self.split_instance(os.path.join(self.cfg.segmenter.data_preds, file))
+                self.split_instance(os.path.join(self.segmenter_data_preds, file))
 
                 # convert instances to pcd
-                dir_target = os.path.dirname(os.path.join(self.cfg.segmenter.data_preds, file)) + '/' + os.path.join(self.cfg.segmenter.data_preds, file).split('/')[-1].split('.')[0] + "_split_instance"
+                dir_target = os.path.dirname(os.path.join(self.segmenter_data_preds, file)) + '/' + os.path.join(self.cfg.segmenter.data_preds, file).split('/')[-1].split('.')[0] + "_split_instance"
                 convert_all_in_folder(
                     src_folder_in=dir_target, 
                     src_folder_out=os.path.normpath(dir_target) + "/data", 
@@ -229,14 +272,103 @@ class Pipeline():
                     )
                 
                 # makes predictions
+                input_folder = os.path.normpath(self.project_root_src) + '/' + dir_target + '/'
+                output_folder = os.path.normpath(self.project_root_src) + '/' + os.path.normpath(dir_target) + "/data/"
                 self.run_subprocess(
                     src_script="/home/pdm/models/KDE_classifier/",
                     script_name="./run_inference.sh",
-                    params= [os.path.normpath(self.project_root_src) + '/' + dir_target + '/',
-                            os.path.normpath(self.project_root_src) + '/' + os.path.normpath(dir_target) + "/data/",
-                            ],
+                    params= [input_folder, output_folder],
+                    verbose=True
                     )
+                
+                # convert predictions to laz
+                convert_all_in_folder(src_folder_in=output_folder, src_folder_out=output_folder, in_type='pcd', out_type='laz')
+                for file in os.listdir(output_folder):
+                    if file.endswith('.pcd'):
+                        os.remove(os.path.join(output_folder, file))
+                
+    def create_pseudo_labels(self):        
+        for child in os.listdir(self.segmenter_data_preds):
+            # select only subfolders that coorespond to instances
+            full_path = os.path.abspath(os.path.join(self.segmenter_data_preds, child))
+            if os.path.isdir(full_path) and full_path.endswith('instance'):
+                original_file_src = os.path.join(
+                    self.data_src,
+                    child.split('_out')[0] + '.' + self.file_format
+                )
+                results_src = os.path.join(full_path, 'results/')
 
-    def prepare_gt(self):
-        assert self.source_preds_classifier != None
+                # load sources
+                df_results = pd.read_csv(os.path.join(results_src, 'results.csv'), sep=';')
+                # self.classified_clusters = pd.read_csv(os.path.join(results_src, 'results.csv'), sep=';')
+                
+                original_file = laspy.read(original_file_src)
+                coords_A = np.stack((original_file.x, original_file.y, original_file.z), axis=1)
+                coords_original_file_view = coords_A.view([('', coords_A.dtype)] * 3).reshape(-1)
+            
+                # add pseudo-label attribute if non-existant
+                if not 'pseudo_label' in list(original_file.point_format.dimension_names):
+                    original_file.add_extra_dim(
+                        laspy.ExtraBytesParams(
+                            name='pseudo_label',
+                            type=np.uint8,
+                            description='pseudo-label'
+                        )
+                    )
+                    original_file['pseudo_label'] = np.zeros(len(original_file), dtype=np.uint8)
+                self.classified_clusters = []
+                
+                # load all clusters
+                for _, row in df_results.iterrows():
+                    cluster_path = os.path.join(full_path, row.file_name.split('.pcd')[0] + '.' + self.file_format)
+                    cluster = laspy.open(cluster_path, mode='r').read()
+                    coords_B = np.stack((cluster.x, cluster.y, cluster.z), axis=1)
+                    coords_B_view = coords_B.view([('', coords_B.dtype)] * 3).reshape(-1)
+                    self.classified_clusters.append((coords_B_view, row['class']))
+
+                # create masks on the original tile for each cluster (multiprocessing)
+                with ProcessPoolExecutor() as executor:
+                    partialFunc = partial(self.process_row, coords_original_file_view)
+                    results = list(tqdm(executor.map(partialFunc, range(len(self.classified_clusters))), total=len(self.classified_clusters), smoothing=0.9, desc="Updating pseudo-label"))
+                
+                # Update the original file based on results
+                for mask, value in results:
+                    original_file.pseudo_label[mask] = value
+                
+                # saving back original file
+                original_file.write(original_file_src)
+
+    def process_row(self, coords_original_file_view, row_id):
+        # Find matching points between original file and cluster
+        mask = np.isin(coords_original_file_view, self.classified_clusters[row_id][0])
+        
+        return mask, self.classified_clusters[row_id][1]
+
+    def train(self):
+        # modify dataset config file
+        Pipeline.change_var_val_yaml(
+            src_yaml=self.cfg_segmenter.training.config_data_src,
+            var='data/dataroot',
+            val=os.path.join(self.cfg.pipeline.root_src, self.cfg_segmenter.training.data_train),
+        )
+
+        # modify results directory
+        if self.cfg_segmenter.training.result_src_full_name == 'None':
+            self.cfg_segmenter.training.result_src_full_name = datetime.now().strftime(r"%Y%m%d_%H%M%S") + self.cfg_segmenter.training.result_src_name_suffixe
+        Pipeline.change_var_val_yaml(
+            src_yaml=self.cfg_segmenter.training.config_results_src,
+            var='hydra/run/dir',
+            # val="../../" + os.path.normpath(self.cfg_segmenter.training.result_training_dir) + "/" + r"${now:%Y%m%d_%H%M%S}_" + self.cfg_segmenter.training.result_src_name + '/' + str(self.loop_iteration),
+            val="../../" + os.path.normpath(self.cfg_segmenter.training.result_training_dir) + "/" + self.cfg_segmenter.training.result_src_full_name + '/' + str(self.loop_iteration),
+        )
+
+        # run training script
+        self.run_subprocess(
+            src_script="/home/pdm/models/SegmentAnyTree/",
+            script_name="./run_pipeline.sh",
+            params= [102, 2],
+            )
+        
+        # update path to checkpoint
+        self.model_checkpoint_src = os.path.join(self.cfg.pipeline.root_src, os.path.normpath(self.cfg_segmenter.training.result_training_dir) + "/" + self.cfg_segmenter.training.result_src_full_name)
         

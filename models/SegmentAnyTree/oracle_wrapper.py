@@ -1,7 +1,8 @@
 import os
 import shutil
 
-PATH_DATA = '/home/datascience' # TODO: change this to the path taken from the config file
+# PATH_DATA = '/home/datascience' # TODO: change this to the path taken from the config file
+PATH_DATA = '/home/pdm/data/FORinstance_dataset' # TODO: change this to the path taken from the config file
 DEBUG_MODE = False
 
 # read the configuration file
@@ -13,6 +14,7 @@ def run_oracle_wrapper():
 
     else:
         # get the input and output locations from the environment variables
+        print(os.environ)
         data_location = os.environ['OBJ_INPUT_LOCATION']
 
         # remap the input and output locations

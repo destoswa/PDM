@@ -208,6 +208,7 @@ class BaseDataset:
             log.info(self.train_sampler)
 
         if self.train_dataset:
+            print("========= TRAIN DATASET ==========")
             self._train_loader = self._dataloader(
                 self.train_dataset,
                 self.train_pre_batch_collate_transform,
@@ -220,6 +221,8 @@ class BaseDataset:
             )
 
         if self.test_dataset:
+            print("========= TEST DATASET ==========")
+            print(self.test_dataset)
             self._test_loaders = [
                 self._dataloader(
                     dataset,
@@ -235,6 +238,7 @@ class BaseDataset:
             ]
 
         if self.val_dataset:
+            print("========= VAL DATASET ==========")
             self._val_loader = self._dataloader(
                 self.val_dataset,
                 self.val_pre_batch_collate_transform,

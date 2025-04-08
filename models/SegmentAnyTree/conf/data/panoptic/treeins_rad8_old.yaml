@@ -107,3 +107,4 @@ data:
       quantize_coords: true
       mode: ${data.mode}
   val_transform: ${data.test_transform}
+dataroot: /home/pdm/data/FORinstance_dataset

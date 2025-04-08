@@ -10,6 +10,7 @@ from tqdm.auto import tqdm
 import wandb
 import numpy as np
 import random
+from omegaconf import OmegaConf
 
 # Import building function for model and dataset
 from torch_points3d.datasets.dataset_factory import instantiate_dataset
@@ -45,6 +46,7 @@ class Trainer:
     def __init__(self, cfg):
         self.set_seed(2022)
         self._cfg = cfg
+        self.is_training = cfg.is_training
         self._initialize_trainer()
 
     def _initialize_trainer(self):
@@ -76,7 +78,6 @@ class Trainer:
             Wandb.launch(self._cfg, self._cfg.training.wandb.public and self.wandb_log)
 
         # Checkpoint
-        print("CONFIG CHECKPOINT DIR: ", self._cfg.training.checkpoint_dir)
         self._checkpoint: ModelCheckpoint = ModelCheckpoint(
             self._cfg.training.checkpoint_dir,
             self._cfg.model_name,
@@ -87,12 +88,22 @@ class Trainer:
 
         # Create model and datasets
         if not self._checkpoint.is_empty:
-            self._dataset: BaseDataset = instantiate_dataset(self._checkpoint.data_config)
+            # print("DATA CONFIG 1:\n", self._checkpoint.data_config.dataroot)
+            # print("DATA CONFIG 1:\n", self._cfg.data.dataroot)
+
+            # self._checkpoint.data_config.dataroot = self._cfg.data.dataroot
+            if self.is_training:
+                self._dataset: BaseDataset = instantiate_dataset(self._cfg.data)
+            else:
+                print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+                self._dataset: BaseDataset = instantiate_dataset(self._checkpoint.data_config)
             self._model: BaseModel = self._checkpoint.create_model(
                 self._dataset, weight_name=self._cfg.training.weight_name
             )
+            
             #train need
-            #self._model.instantiate_optimizers(self._cfg, "cuda" in device)
+            if self.is_training:
+                self._model.instantiate_optimizers(self._cfg, "cuda" in device)
         else:
             self._dataset: BaseDataset = instantiate_dataset(self._cfg.data)
             self._model: BaseModel = instantiate_model(copy.deepcopy(self._cfg), self._dataset)
@@ -106,7 +117,7 @@ class Trainer:
             #    )
         self._checkpoint.dataset_properties = self._dataset.used_properties
 
-        log.info(self._model)
+        # log.info(self._model)
 
         self._model.log_optimizers()
         log.info("Model size = %i", sum(param.numel() for param in self._model.parameters() if param.requires_grad))
@@ -119,7 +130,7 @@ class Trainer:
             self._cfg.training.num_workers,
             self.precompute_multi_scale,
         )
-        log.info(self._dataset)
+        # log.info(self._dataset)
 
         # Verify attributes in dataset
         #self._model.verify_data(self._dataset.train_dataset[0])
