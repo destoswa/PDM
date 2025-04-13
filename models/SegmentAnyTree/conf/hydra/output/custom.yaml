@@ -1,3 +1,3 @@
 hydra:
   run:
-    dir: ../../results/trainings/${now:%Y%m%d_%H%M%S}_test/0
+    dir: ../../results/trainings/20250413_150507_test/0

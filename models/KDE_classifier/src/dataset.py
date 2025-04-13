@@ -36,7 +36,7 @@ class ModelTreesDataLoader(Dataset):
                 os.mkdir(pickle_dir + "Single")
             else:
                 os.mkdir(pickle_dir + "data")
-        self.data = pd.read_csv(root_dir + csvfile, delimiter=';')
+        self.data = pd.read_csv(os.path.join(root_dir, csvfile), delimiter=';')
         self.data = self.data.sample(frac=frac, random_state=42).reset_index(drop=True)
 
         print('Loading ', split, ' set...')
@@ -93,7 +93,7 @@ class ModelTreesDataLoader(Dataset):
             sample = {'data': pointCloud, 'label': label}
             sample = kde_transform(sample)
 
-            with open(pickle_dir + samp['data'] + '.pickle', 'wb') as file:
+            with open(os.path.join(pickle_dir, samp['data'] + '.pickle'), 'wb') as file:
                 pickle.dump(sample, file)
             return ""
         except Exception as e:

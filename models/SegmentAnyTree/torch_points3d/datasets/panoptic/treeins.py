@@ -79,7 +79,7 @@ def to_ins_ply(pos, label, file):
     assert len(label.shape) == 1
     assert pos.shape[0] == label.shape[0]
     pos = np.asarray(pos)
-    max_instance = np.max(np.asarray(label)).astype(np.int32) + 1
+    # max_instance = np.max(np.asarray(label)).astype(np.int32) + 1
     # rd_colors = np.random.randint(255, size=(max_instance, 3), dtype=np.uint8)
     # colors = rd_colors[np.asarray(label).astype(int)]
     # ply_array = np.ones(
@@ -599,7 +599,7 @@ class TreeinsFusedDataset(BaseDataset):
         if len(self.dataset_opt.fold) == 0 or isinstance(self.dataset_opt.fold[0], int):
             self.train_dataset = dataset_cls(
                 self._data_path,
-                sample_per_epoch=3000,
+                sample_per_epoch=dataset_opt.sample_per_epoch,
                 radius=self.dataset_opt.radius,
                 grid_size=self.dataset_opt.grid_size,
                 forest_regions=self.dataset_opt.forest_regions,  # @Treeins

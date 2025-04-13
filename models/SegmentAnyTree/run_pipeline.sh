@@ -1,9 +1,9 @@
 #!/bin/bash
 
-
 # python3 oracle_wrapper.py
 epochs=$1
 batch_size=$2
+sample_per_epoch=$3
 
 python3 train.py task=panoptic \
     data=panoptic/treeins_rad8 \
@@ -13,4 +13,5 @@ python3 train.py task=panoptic \
     job_name=treeins_my_first_run \
     epochs=$(($epochs)) \
     batch_size=$(($batch_size)) \
+    data.sample_per_epoch=$(($sample_per_epoch))
 

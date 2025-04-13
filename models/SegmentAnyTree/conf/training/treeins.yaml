@@ -2,7 +2,7 @@
 # @package training
 epochs: 102 #TO ADAPT: specify number of training epochs 150
 num_workers: 0
-batch_size: 2 #TO ADAPT: specify batch size
+batch_size: 1 #TO ADAPT: specify batch size
 shuffle: True
 cuda: 0
 precompute_multi_scale: False # Compute multiscate features on cpu for faster training / inference

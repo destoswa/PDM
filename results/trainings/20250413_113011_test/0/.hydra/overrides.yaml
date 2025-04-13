@@ -4,5 +4,6 @@
 - model_name=PointGroup-PAPER
 - training=treeins
 - job_name=treeins_my_first_run
-- epochs=102
+- epochs=1
 - batch_size=2
+- data.sample_per_epoch=10

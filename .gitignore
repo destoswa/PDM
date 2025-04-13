@@ -1,5 +1,8 @@
 data/*
+home/*
 *.tar
 *.pt
 models/SegmentAnyTree/model_file/*
 ./Miniconda3-latest-Linux-x86_64.sh
+models/SegmentAnyTree/model_file/PointGroup-PAPER.pt
+results/*

@@ -43,10 +43,24 @@ class Trainer:
     It supports MC dropout - multiple voting_runs for val / test datasets
     """
 
+    @staticmethod
+    def print_cfg(cfg, num_tab=0):
+        print("yaaaaaaaaa")
+        # print(OmegaConf.to_object(cfg))
+        for key, val in cfg.items():
+            if isinstance(val, dict):
+                print("\t" * num_tab, f"{key}:")
+                Trainer.print_cfg(val, num_tab+1)
+            else:
+                print("\t" * num_tab, f"{key}: {val}")
+
+
     def __init__(self, cfg):
         self.set_seed(2022)
         self._cfg = cfg
         self.is_training = cfg.is_training
+        # Trainer.print_cfg(cfg)
+        # return
         self._initialize_trainer()
 
     def _initialize_trainer(self):
@@ -77,6 +91,7 @@ class Trainer:
         if self.wandb_log:
             Wandb.launch(self._cfg, self._cfg.training.wandb.public and self.wandb_log)
 
+        print(f"=============\nCHECKPOINT: {self._cfg.training.checkpoint_dir}\n============")
         # Checkpoint
         self._checkpoint: ModelCheckpoint = ModelCheckpoint(
             self._cfg.training.checkpoint_dir,
@@ -95,7 +110,6 @@ class Trainer:
             if self.is_training:
                 self._dataset: BaseDataset = instantiate_dataset(self._cfg.data)
             else:
-                print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
                 self._dataset: BaseDataset = instantiate_dataset(self._checkpoint.data_config)
             self._model: BaseModel = self._checkpoint.create_model(
                 self._dataset, weight_name=self._cfg.training.weight_name
@@ -157,8 +171,8 @@ class Trainer:
     def train(self):
         self._is_training = True
 
-        for epoch in range(self._checkpoint.start_epoch, self._cfg.training.epochs):
-            log.info("EPOCH %i / %i", epoch, self._cfg.training.epochs)
+        for epoch in range(self._checkpoint.start_epoch, self._checkpoint.start_epoch + self._cfg.training.epochs):
+            log.info("EPOCH %i / %i", epoch, self._checkpoint.start_epoch + self._cfg.training.epochs)
 
             self._train_epoch(epoch)
 
@@ -284,7 +298,7 @@ class Trainer:
                                 return 0
 
             self._finalize_epoch(epoch)
-            self._tracker.print_summary()
+            # self._tracker.print_summary()
 
     def set_seed(self, seed):
         # Set the random seeds for repeatability

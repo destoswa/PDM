@@ -1,0 +1,39 @@
+[2025-04-13 11:30:15,035][torch_points3d.trainer][INFO] - DEVICE : cuda
+[2025-04-13 11:30:23,902][torch_points3d.metrics.model_checkpoint][INFO] - Loading checkpoint from /home/pdm/models/SegmentAnyTree/model_file/PointGroup-PAPER.pt
+[2025-04-13 11:30:28,921][torch_points3d.datasets.segmentation.treeins][INFO] - pre_collate_transform ...
+[2025-04-13 11:30:28,921][torch_points3d.datasets.segmentation.treeins][INFO] - Compose([
+    SaveOriginalPosId,
+    GridSampling3D(grid_size=0.2, quantize_coords=False, mode=last),
+])
+[2025-04-13 11:30:31,958][torch_points3d.applications.minkowski][WARNING] - Minkowski API is deprecated in favor of the SparseConv3d API. It should be a simple drop in replacement (no change to the API).
+[2025-04-13 11:30:31,968][torch_points3d.applications.modelfactory][INFO] - The config will be used to build the model
+[2025-04-13 11:30:32,174][torch_points3d.applications.minkowski][WARNING] - Minkowski API is deprecated in favor of the SparseConv3d API. It should be a simple drop in replacement (no change to the API).
+[2025-04-13 11:30:32,175][torch_points3d.applications.modelfactory][INFO] - The config will be used to build the model
+[2025-04-13 11:30:32,268][torch_points3d.applications.minkowski][WARNING] - Minkowski API is deprecated in favor of the SparseConv3d API. It should be a simple drop in replacement (no change to the API).
+[2025-04-13 11:30:32,268][torch_points3d.applications.modelfactory][INFO] - The config will be used to build the model
+[2025-04-13 11:30:32,352][torch_points3d.metrics.model_checkpoint][INFO] - Available weights : ['latest', 'loss', 'offset_norm_loss', 'offset_dir_loss', 'ins_loss', 'ins_var_loss', 'ins_dist_loss', 'ins_reg_loss', 'semantic_loss', 'acc', 'macc', 'miou', 'pos', 'neg', 'Iacc', 'cov', 'wcov', 'mIPre', 'mIRec', 'F1', 'score_loss', 'map']
+[2025-04-13 11:30:32,352][torch_points3d.metrics.model_checkpoint][INFO] - Model loaded from PointGroup-PAPER.pt:latest
+[2025-04-13 11:30:32,565][torch_points3d.core.schedulers.bn_schedulers][INFO] - Setting batchnorm momentum at 0.1
+[2025-04-13 11:30:32,654][torch_points3d.core.schedulers.bn_schedulers][INFO] - Setting batchnorm momentum at 0.1
+[2025-04-13 11:30:32,657][torch_points3d.utils.colors][INFO] - [0;32mOptimizer: Adam (
+Parameter Group 0
+    amsgrad: False
+    betas: (0.9, 0.999)
+    eps: 1e-08
+    initial_lr: 0.001
+    lr: 0.001
+    weight_decay: 0
+)[0m
+[2025-04-13 11:30:32,658][torch_points3d.utils.colors][INFO] - [0;32mLearning Rate Scheduler: ExponentialLR({'gamma': 0.9885}, update_scheduler_on=on_epoch)[0m
+[2025-04-13 11:30:32,658][torch_points3d.utils.colors][INFO] - [0;32mBatchNorm Scheduler: BNMomentumScheduler(base_momentum: 0.1, update_scheduler_on=on_epoch)[0m
+[2025-04-13 11:30:32,659][torch_points3d.utils.colors][INFO] - [0;32mAccumulated gradients: None[0m
+[2025-04-13 11:30:32,661][torch_points3d.trainer][INFO] - Model size = 11872075
+[2025-04-13 11:30:32,679][torch_points3d.datasets.base_dataset][INFO] - Available stage selection datasets: [0;95m ['test'] [0m
+[2025-04-13 11:30:32,680][torch_points3d.datasets.base_dataset][INFO] - The models will be selected using the metrics on following dataset: [0;95m test [0m
+[2025-04-13 11:30:38,096][torch_points3d.trainer][INFO] - EPOCH 100 / 101
+[2025-04-13 11:30:38,100][torch_points3d.visualization.visualizer][WARNING] - Number of samples to save is higher than the number of available elements
+[2025-04-13 11:31:04,541][torch_points3d.trainer][INFO] - Learning rate = 0.000989
+[2025-04-13 11:32:29,105][torch_points3d.utils.colors][INFO] - [0;94mins_dist_loss: 0.040741268545389175 -> 0.0, acc: 97.71660790143653 -> 97.86871026605755, macc: 96.43190183973267 -> 98.6250031020281, miou: 92.1493716672127 -> 93.23296180051828[0m
+[2025-04-13 11:34:02,488][torch_points3d.utils.colors][INFO] - [0;94mins_dist_loss: 0.0 -> 0.0[0m
+[2025-04-13 11:34:34,984][torch_points3d.trainer][INFO] - DEVICE : cuda
+[2025-04-13 11:34:43,995][torch_points3d.metrics.model_checkpoint][INFO] - Loading checkpoint from /home/pdm/models/SegmentAnyTree/model_file/PointGroup-PAPER.pt

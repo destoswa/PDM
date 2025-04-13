@@ -1,5 +1,7 @@
+import os
 import laspy
 import numpy as np
+import argparse
 from plyfile import PlyData, PlyElement
 from pathlib import Path
 import csv
@@ -35,6 +37,8 @@ def las_to_ply(las_file_path, ply_file_path, remove_ground=False, remove_lowveg=
     :return: (str) path where .ply file has actually been saved with incorporating folder name that depends on what points we have removed
     """
     las = laspy.read(las_file_path)
+    # print(list(las.point_format.dimension_names))
+    # exit()
 
     scale_x, scale_y, scale_z = las.header.scale
     #we ignore the offset given in las.header.offset for each dimension, as relative position between las data files doesn't matter
@@ -72,7 +76,8 @@ def las_to_ply(las_file_path, ply_file_path, remove_ground=False, remove_lowveg=
     #data_struct['treeSP'] = las.treeSP.astype('f4')[points_to_keep]
 
     #adds the string foldername_addition to the data folder name to make different data folders depending on what points we have removed
-    path_to_region = ply_file_path.parents[4].joinpath(ply_file_path.parts[-5]+foldername_addition).joinpath(*ply_file_path.parts[-4:-1])
+    # path_to_region = ply_file_path.parents[4].joinpath(ply_file_path.parts[-5]+foldername_addition).joinpath(*ply_file_path.parts[-4:-1])
+    path_to_region = ply_file_path.parents[4].joinpath(ply_file_path.parts[-5]).joinpath(*ply_file_path.parts[-4:-1])
     if not path_to_region.is_dir():
         path_to_region.mkdir(parents=True, exist_ok=True)
     ply_file_path_datanamechange = path_to_region.joinpath(ply_file_path.name)
@@ -158,6 +163,10 @@ def train_val_test_split(train_test_split_path):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("data_path", type=Path, default='/home/pdm/data/FORinstance_dataset')
+    arg = parser.parse_args()
+
     random.seed(42) #set seed so that validation set gets chosen randomly, but fixed from within the files annotated as
     #"train" by Stefano's train test split in data_split_metadata.csv
 
@@ -165,13 +174,17 @@ if __name__ == '__main__':
 
     #TO ADAPT: path to las data folder (data from the different regions (CULS, etc.) and data_split_metadata.csv must be in this folder)
     # las_data_basepath = Path('/local/home/vfrawa/Documents/data')
-    las_data_basepath = Path('/home/pdm/data/FORinstance_dataset')
+    # las_data_basepath = Path('/home/pdm/data/FORinstance_dataset')
+    las_data_basepath = Path(arg.data_path)
     train_test_split_path = str(las_data_basepath) + '/data_split_metadata.csv'
     rel_path_list, forest_region_list, split_list = train_val_test_split(train_test_split_path) #creates train-val-test split from train-test split
     #TO ADAPT: path where the code folder "OutdoorPanopticSeg_V2" is located
     # code_basepath = '/local/home/vfrawa/Documents/code'
-    code_basepath = '/home/pdm/data/FORinstance_dataset'
-    codes_data_basepath = Path(code_basepath + '/OutdoorPanopticSeg_V2/data/treeinsfused/raw') #this is where the ply files should be located so that the code accesses them
+    # code_basepath = '/home/pdm/data/FORinstance_dataset'
+    code_basepath = arg.data_path
+    # codes_data_basepath = Path(code_basepath + '/OutdoorPanopticSeg_V2/data/treeinsfused/raw') #this is where the ply files should be located so that the code accesses them
+    # codes_data_basepath = Path(code_basepath + '/treeinsfused/raw') #this is where the ply files should be located so that the code accesses them
+    codes_data_basepath = Path(os.path.join(code_basepath, 'treeinsfused/raw'))
     #TO ADAPT: choose whether points labelled as ground, low vegetation and outpoints should be removed entirely or not
     remove_ground = False
     remove_lowveg = False

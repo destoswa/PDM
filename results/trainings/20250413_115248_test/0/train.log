@@ -1,0 +1,36 @@
+[2025-04-13 11:52:53,919][torch_points3d.trainer][INFO] - DEVICE : cuda
+[2025-04-13 11:53:04,149][torch_points3d.metrics.model_checkpoint][INFO] - Loading checkpoint from /home/pdm/models/SegmentAnyTree/model_file/PointGroup-PAPER.pt
+[2025-04-13 11:53:10,780][torch_points3d.applications.minkowski][WARNING] - Minkowski API is deprecated in favor of the SparseConv3d API. It should be a simple drop in replacement (no change to the API).
+[2025-04-13 11:53:10,781][torch_points3d.applications.modelfactory][INFO] - The config will be used to build the model
+[2025-04-13 11:53:10,969][torch_points3d.applications.minkowski][WARNING] - Minkowski API is deprecated in favor of the SparseConv3d API. It should be a simple drop in replacement (no change to the API).
+[2025-04-13 11:53:10,980][torch_points3d.applications.modelfactory][INFO] - The config will be used to build the model
+[2025-04-13 11:53:11,069][torch_points3d.applications.minkowski][WARNING] - Minkowski API is deprecated in favor of the SparseConv3d API. It should be a simple drop in replacement (no change to the API).
+[2025-04-13 11:53:11,070][torch_points3d.applications.modelfactory][INFO] - The config will be used to build the model
+[2025-04-13 11:53:11,152][torch_points3d.metrics.model_checkpoint][INFO] - Available weights : ['latest', 'loss', 'offset_norm_loss', 'offset_dir_loss', 'ins_loss', 'ins_var_loss', 'ins_dist_loss', 'ins_reg_loss', 'semantic_loss', 'acc', 'macc', 'miou', 'pos', 'neg', 'Iacc', 'cov', 'wcov', 'mIPre', 'mIRec', 'F1', 'score_loss', 'map']
+[2025-04-13 11:53:11,153][torch_points3d.metrics.model_checkpoint][INFO] - Model loaded from PointGroup-PAPER.pt:latest
+[2025-04-13 11:53:11,363][torch_points3d.core.schedulers.bn_schedulers][INFO] - Setting batchnorm momentum at 0.1
+[2025-04-13 11:53:11,451][torch_points3d.core.schedulers.bn_schedulers][INFO] - Setting batchnorm momentum at 0.1
+[2025-04-13 11:53:11,454][torch_points3d.utils.colors][INFO] - [0;32mOptimizer: Adam (
+Parameter Group 0
+    amsgrad: False
+    betas: (0.9, 0.999)
+    eps: 1e-08
+    initial_lr: 0.001
+    lr: 0.001
+    weight_decay: 0
+)[0m
+[2025-04-13 11:53:11,454][torch_points3d.utils.colors][INFO] - [0;32mLearning Rate Scheduler: ExponentialLR({'gamma': 0.9885}, update_scheduler_on=on_epoch)[0m
+[2025-04-13 11:53:11,454][torch_points3d.utils.colors][INFO] - [0;32mBatchNorm Scheduler: BNMomentumScheduler(base_momentum: 0.1, update_scheduler_on=on_epoch)[0m
+[2025-04-13 11:53:11,455][torch_points3d.utils.colors][INFO] - [0;32mAccumulated gradients: None[0m
+[2025-04-13 11:53:11,457][torch_points3d.trainer][INFO] - Model size = 11872075
+[2025-04-13 11:53:11,473][torch_points3d.datasets.base_dataset][INFO] - Available stage selection datasets: [0;95m ['test'] [0m
+[2025-04-13 11:53:11,474][torch_points3d.datasets.base_dataset][INFO] - The models will be selected using the metrics on following dataset: [0;95m test [0m
+[2025-04-13 11:53:17,757][torch_points3d.trainer][INFO] - EPOCH 100 / 101
+[2025-04-13 11:53:17,761][torch_points3d.visualization.visualizer][WARNING] - Number of samples to save is higher than the number of available elements
+[2025-04-13 11:53:52,159][torch_points3d.trainer][INFO] - Learning rate = 0.000989
+[2025-04-13 11:55:27,128][torch_points3d.utils.colors][INFO] - [0;94mins_dist_loss: 0.040741268545389175 -> 0.0, score_loss: 0.14047054946422577 -> 0.12063487619161606, acc: 97.71660790143653 -> 97.76601612400798, macc: 96.43190183973267 -> 98.59962363508085, miou: 92.1493716672127 -> 92.94124191773354[0m
+[2025-04-13 11:57:06,187][torch_points3d.utils.colors][INFO] - [0;94mins_dist_loss: 0.0 -> 0.0, score_loss: 0.12063487619161606 -> 0.12063487619161606, acc: 97.76601612400798 -> 97.76615582467045, macc: 98.59962363508085 -> 98.59970777348902, miou: 92.94124191773354 -> 92.94164941217554[0m
+[2025-04-13 11:57:40,660][torch_points3d.trainer][INFO] - DEVICE : cuda
+[2025-04-13 11:57:47,824][torch_points3d.metrics.model_checkpoint][INFO] - Loading checkpoint from /home/pdm/models/SegmentAnyTree/model_file/PointGroup-PAPER.pt
+[2025-04-13 11:58:16,524][torch_points3d.trainer][INFO] - DEVICE : cuda
+[2025-04-13 11:58:24,912][torch_points3d.metrics.model_checkpoint][INFO] - Loading checkpoint from /home/pdm/models/SegmentAnyTree/model_file/PointGroup-PAPER.pt

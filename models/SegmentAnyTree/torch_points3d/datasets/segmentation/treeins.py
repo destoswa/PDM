@@ -563,7 +563,6 @@ class TreeinsSphere(TreeinsOriginalFused):
             self._datas = [self._datas]
         if self._sample_per_epoch > 0:
             self._centres_for_sampling = []
-            #print(self._datas)
             for i, data in enumerate(self._datas):
                 assert not hasattr(
                     data, cT.SphereSampling.KDTREE_KEY
@@ -658,8 +657,6 @@ class TreeinsFusedDataset(BaseDataset):
     INV_OBJECT_LABEL = INV_OBJECT_LABEL
 
     def __init__(self, dataset_opt):
-        super().__init__(dataset_opt)
-
         sampling_format = dataset_opt.get("sampling_format", "sphere")
         dataset_cls = TreeinsCylinder if sampling_format == "cylinder" else TreeinsSphere
 

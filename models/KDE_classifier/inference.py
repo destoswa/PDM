@@ -69,10 +69,10 @@ def inference(args):
 
     # preprocess the samples
     if args['inference']['do_preprocess']:
-        lst_files_to_process = ['data/' + cls for cls in os.listdir(args['inference']['src_data'])]
+        lst_files_to_process = ['data/' + cls for cls in os.listdir(args['inference']['src_data']) if cls.endswith('pcd')]
         df_files_to_process = pd.DataFrame(lst_files_to_process, columns=['data'])
         df_files_to_process['label'] = 0
-        df_files_to_process.to_csv(args['inference']['src_root_data'] + INFERENCE_FILE, sep=';', index=False)
+        df_files_to_process.to_csv(os.path.join(args['inference']['src_root_data'], INFERENCE_FILE), sep=';', index=False)
 
     # make the predictions
     print("making predictions...")
@@ -104,6 +104,11 @@ def inference(args):
         pred = model(grid)
         pred_choice = pred.data.max(1)[1]
 
+        # # map to fitting value in segmenter
+        # mapping = {0:1, 1:0, 2:4}
+        # for key, val in mapping.items():
+        #     pred_choice[pred_choice == key] = val
+
         # copy samples into right result folder
         for idx, pred in enumerate(pred_choice):
             # fn = filenames[idx].replace('.pickle', '')
@@ -113,12 +118,15 @@ def inference(args):
             # shutil.copyfile(os.path.abspath('inference/' + fn), os.path.abspath(dest))
             # df_predictions.loc[len(df_predictions)] = [fn, pred.item()]
             fn = filenames[idx].replace('.pickle', '')
-            dest = os.path.normpath(args['inference']['src_root_data']) + '/results/' + dict_labels[pred.item()] + "/" + fn.replace('data/', "")
-            shutil.copyfile(os.path.normpath(args['inference']['src_root_data']) + '/' + fn, dest)
+            # dest = os.path.normpath(args['inference']['src_root_data']) + '/results/' + dict_labels[pred.item()] + "/" + fn.replace('data/', "")
+            dest = os.path.join(args['inference']['src_root_data'], 'results/', dict_labels[pred.item()] + "/" + fn.replace('data/', ""))
+            # shutil.copyfile(os.path.normpath(args['inference']['src_root_data']) + '/' + fn, dest)
+            shutil.copyfile(os.path.join(args['inference']['src_root_data'], fn), dest)
             df_predictions.loc[len(df_predictions)] = [fn, pred.item()]
 
     # save results in csv file
-    df_predictions.to_csv(args['inference']['src_root_data'] + 'results/results.csv', sep=';', index=False)
+    # df_predictions.to_csv(args['inference']['src_root_data'] + 'results/results.csv', sep=';', index=False)
+    df_predictions.to_csv(os.path.join(args['inference']['src_root_data'], 'results/results.csv'), sep=';', index=False)
 
     # Remove temp folder
     inferenceSet.clean_temp()

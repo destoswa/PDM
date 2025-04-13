@@ -1,0 +1,106 @@
+[2025-04-13 13:34:32,700][torch_points3d.trainer][INFO] - DEVICE : cuda
+[2025-04-13 13:34:41,166][torch_points3d.metrics.model_checkpoint][INFO] - Loading checkpoint from /home/pdm/models/SegmentAnyTree/model_file/PointGroup-PAPER.pt
+[2025-04-13 13:34:47,363][torch_points3d.applications.minkowski][WARNING] - Minkowski API is deprecated in favor of the SparseConv3d API. It should be a simple drop in replacement (no change to the API).
+[2025-04-13 13:34:47,364][torch_points3d.applications.modelfactory][INFO] - The config will be used to build the model
+[2025-04-13 13:34:47,554][torch_points3d.applications.minkowski][WARNING] - Minkowski API is deprecated in favor of the SparseConv3d API. It should be a simple drop in replacement (no change to the API).
+[2025-04-13 13:34:47,564][torch_points3d.applications.modelfactory][INFO] - The config will be used to build the model
+[2025-04-13 13:34:47,655][torch_points3d.applications.minkowski][WARNING] - Minkowski API is deprecated in favor of the SparseConv3d API. It should be a simple drop in replacement (no change to the API).
+[2025-04-13 13:34:47,655][torch_points3d.applications.modelfactory][INFO] - The config will be used to build the model
+[2025-04-13 13:34:47,740][torch_points3d.metrics.model_checkpoint][INFO] - Available weights : ['latest', 'loss', 'offset_norm_loss', 'offset_dir_loss', 'ins_loss', 'ins_var_loss', 'ins_dist_loss', 'ins_reg_loss', 'semantic_loss', 'acc', 'macc', 'miou', 'pos', 'neg', 'Iacc', 'cov', 'wcov', 'mIPre', 'mIRec', 'F1', 'score_loss', 'map']
+[2025-04-13 13:34:47,741][torch_points3d.metrics.model_checkpoint][INFO] - Model loaded from PointGroup-PAPER.pt:latest
+[2025-04-13 13:34:47,952][torch_points3d.core.schedulers.bn_schedulers][INFO] - Setting batchnorm momentum at 0.1
+[2025-04-13 13:34:48,040][torch_points3d.core.schedulers.bn_schedulers][INFO] - Setting batchnorm momentum at 0.1
+[2025-04-13 13:34:48,044][torch_points3d.utils.colors][INFO] - [0;32mOptimizer: Adam (
+Parameter Group 0
+    amsgrad: False
+    betas: (0.9, 0.999)
+    eps: 1e-08
+    initial_lr: 0.001
+    lr: 0.001
+    weight_decay: 0
+)[0m
+[2025-04-13 13:34:48,044][torch_points3d.utils.colors][INFO] - [0;32mLearning Rate Scheduler: ExponentialLR({'gamma': 0.9885}, update_scheduler_on=on_epoch)[0m
+[2025-04-13 13:34:48,045][torch_points3d.utils.colors][INFO] - [0;32mBatchNorm Scheduler: BNMomentumScheduler(base_momentum: 0.1, update_scheduler_on=on_epoch)[0m
+[2025-04-13 13:34:48,045][torch_points3d.utils.colors][INFO] - [0;32mAccumulated gradients: None[0m
+[2025-04-13 13:34:48,047][torch_points3d.trainer][INFO] - Model size = 11872075
+[2025-04-13 13:34:48,063][torch_points3d.datasets.base_dataset][INFO] - Available stage selection datasets: [0;95m ['test'] [0m
+[2025-04-13 13:34:48,064][torch_points3d.datasets.base_dataset][INFO] - The models will be selected using the metrics on following dataset: [0;95m test [0m
+[2025-04-13 13:34:53,983][torch_points3d.trainer][INFO] - EPOCH 100 / 101
+[2025-04-13 13:34:53,986][torch_points3d.visualization.visualizer][WARNING] - Number of samples to save is higher than the number of available elements
+[2025-04-13 13:35:27,025][torch_points3d.trainer][INFO] - Learning rate = 0.000989
+[2025-04-13 13:37:06,797][torch_points3d.utils.colors][INFO] - [0;94mins_dist_loss: 0.040741268545389175 -> 0.0, score_loss: 0.14047054946422577 -> 0.11111731827259064, acc: 97.71660790143653 -> 97.75944306156102, macc: 96.43190183973267 -> 98.5953216533437, miou: 92.1493716672127 -> 92.92235541220843[0m
+[2025-04-13 13:38:52,699][torch_points3d.utils.colors][INFO] - [0;94mins_dist_loss: 0.0 -> 0.0, score_loss: 0.11111731827259064 -> 0.11111731827259064, macc: 98.5953216533437 -> 98.5956444829845, miou: 92.92235541220843 -> 92.92239249453935[0m
+[2025-04-13 13:50:05,566][torch_points3d.trainer][INFO] - DEVICE : cuda
+[2025-04-13 13:50:14,930][torch_points3d.metrics.model_checkpoint][INFO] - Loading checkpoint from /home/pdm/models/SegmentAnyTree/model_file/PointGroup-PAPER.pt
+[2025-04-13 13:50:20,477][torch_points3d.datasets.segmentation.treeins][INFO] - pre_collate_transform ...
+[2025-04-13 13:50:20,477][torch_points3d.datasets.segmentation.treeins][INFO] - Compose([
+    SaveOriginalPosId,
+    GridSampling3D(grid_size=0.2, quantize_coords=False, mode=last),
+])
+[2025-04-13 13:50:24,142][torch_points3d.applications.minkowski][WARNING] - Minkowski API is deprecated in favor of the SparseConv3d API. It should be a simple drop in replacement (no change to the API).
+[2025-04-13 13:50:24,143][torch_points3d.applications.modelfactory][INFO] - The config will be used to build the model
+[2025-04-13 13:50:24,359][torch_points3d.applications.minkowski][WARNING] - Minkowski API is deprecated in favor of the SparseConv3d API. It should be a simple drop in replacement (no change to the API).
+[2025-04-13 13:50:24,360][torch_points3d.applications.modelfactory][INFO] - The config will be used to build the model
+[2025-04-13 13:50:24,462][torch_points3d.applications.minkowski][WARNING] - Minkowski API is deprecated in favor of the SparseConv3d API. It should be a simple drop in replacement (no change to the API).
+[2025-04-13 13:50:24,463][torch_points3d.applications.modelfactory][INFO] - The config will be used to build the model
+[2025-04-13 13:50:24,559][torch_points3d.metrics.model_checkpoint][INFO] - Available weights : ['latest', 'loss', 'offset_norm_loss', 'offset_dir_loss', 'ins_loss', 'ins_var_loss', 'ins_dist_loss', 'ins_reg_loss', 'semantic_loss', 'acc', 'macc', 'miou', 'pos', 'neg', 'Iacc', 'cov', 'wcov', 'mIPre', 'mIRec', 'F1', 'score_loss', 'map']
+[2025-04-13 13:50:24,560][torch_points3d.metrics.model_checkpoint][INFO] - Model loaded from PointGroup-PAPER.pt:latest
+[2025-04-13 13:50:24,814][torch_points3d.core.schedulers.bn_schedulers][INFO] - Setting batchnorm momentum at 0.1
+[2025-04-13 13:50:24,919][torch_points3d.core.schedulers.bn_schedulers][INFO] - Setting batchnorm momentum at 0.1
+[2025-04-13 13:50:24,922][torch_points3d.utils.colors][INFO] - [0;32mOptimizer: Adam (
+Parameter Group 0
+    amsgrad: False
+    betas: (0.9, 0.999)
+    eps: 1e-08
+    initial_lr: 0.001
+    lr: 0.001
+    weight_decay: 0
+)[0m
+[2025-04-13 13:50:24,923][torch_points3d.utils.colors][INFO] - [0;32mLearning Rate Scheduler: ExponentialLR({'gamma': 0.9885}, update_scheduler_on=on_epoch)[0m
+[2025-04-13 13:50:24,923][torch_points3d.utils.colors][INFO] - [0;32mBatchNorm Scheduler: BNMomentumScheduler(base_momentum: 0.1, update_scheduler_on=on_epoch)[0m
+[2025-04-13 13:50:24,923][torch_points3d.utils.colors][INFO] - [0;32mAccumulated gradients: None[0m
+[2025-04-13 13:50:24,926][torch_points3d.trainer][INFO] - Model size = 11872075
+[2025-04-13 13:50:24,938][torch_points3d.datasets.base_dataset][INFO] - Available stage selection datasets: [0;95m ['test'] [0m
+[2025-04-13 13:50:24,939][torch_points3d.datasets.base_dataset][INFO] - The models will be selected using the metrics on following dataset: [0;95m test [0m
+[2025-04-13 13:50:30,975][torch_points3d.trainer][INFO] - EPOCH 100 / 101
+[2025-04-13 13:50:30,979][torch_points3d.visualization.visualizer][WARNING] - Number of samples to save is higher than the number of available elements
+[2025-04-13 13:50:59,441][torch_points3d.trainer][INFO] - Learning rate = 0.000989
+[2025-04-13 13:52:23,358][torch_points3d.utils.colors][INFO] - [0;94mins_dist_loss: 0.040741268545389175 -> 0.0, ins_reg_loss: 0.0031658958178013563 -> 0.0030121589079499245, acc: 97.71660790143653 -> 99.21917683871952, macc: 96.43190183973267 -> 99.46189501675609[0m
+[2025-04-13 13:53:49,596][torch_points3d.utils.colors][INFO] - [0;94mins_dist_loss: 0.0 -> 0.0, ins_reg_loss: 0.0030121589079499245 -> 0.0030121589079499245, acc: 99.21917683871952 -> 99.22019244273476, macc: 99.46189501675609 -> 99.46240854199924[0m
+[2025-04-13 14:04:29,477][torch_points3d.trainer][INFO] - DEVICE : cuda
+[2025-04-13 14:04:37,728][torch_points3d.metrics.model_checkpoint][INFO] - Loading checkpoint from /home/pdm/models/SegmentAnyTree/model_file/PointGroup-PAPER.pt
+[2025-04-13 14:04:42,198][torch_points3d.datasets.segmentation.treeins][INFO] - pre_collate_transform ...
+[2025-04-13 14:04:42,198][torch_points3d.datasets.segmentation.treeins][INFO] - Compose([
+    SaveOriginalPosId,
+    GridSampling3D(grid_size=0.2, quantize_coords=False, mode=last),
+])
+[2025-04-13 14:04:44,986][torch_points3d.applications.minkowski][WARNING] - Minkowski API is deprecated in favor of the SparseConv3d API. It should be a simple drop in replacement (no change to the API).
+[2025-04-13 14:04:44,986][torch_points3d.applications.modelfactory][INFO] - The config will be used to build the model
+[2025-04-13 14:04:45,183][torch_points3d.applications.minkowski][WARNING] - Minkowski API is deprecated in favor of the SparseConv3d API. It should be a simple drop in replacement (no change to the API).
+[2025-04-13 14:04:45,183][torch_points3d.applications.modelfactory][INFO] - The config will be used to build the model
+[2025-04-13 14:04:45,269][torch_points3d.applications.minkowski][WARNING] - Minkowski API is deprecated in favor of the SparseConv3d API. It should be a simple drop in replacement (no change to the API).
+[2025-04-13 14:04:45,270][torch_points3d.applications.modelfactory][INFO] - The config will be used to build the model
+[2025-04-13 14:04:45,353][torch_points3d.metrics.model_checkpoint][INFO] - Available weights : ['latest', 'loss', 'offset_norm_loss', 'offset_dir_loss', 'ins_loss', 'ins_var_loss', 'ins_dist_loss', 'ins_reg_loss', 'semantic_loss', 'acc', 'macc', 'miou', 'pos', 'neg', 'Iacc', 'cov', 'wcov', 'mIPre', 'mIRec', 'F1', 'score_loss', 'map']
+[2025-04-13 14:04:45,353][torch_points3d.metrics.model_checkpoint][INFO] - Model loaded from PointGroup-PAPER.pt:latest
+[2025-04-13 14:04:45,569][torch_points3d.core.schedulers.bn_schedulers][INFO] - Setting batchnorm momentum at 0.1
+[2025-04-13 14:04:45,655][torch_points3d.core.schedulers.bn_schedulers][INFO] - Setting batchnorm momentum at 0.1
+[2025-04-13 14:04:45,658][torch_points3d.utils.colors][INFO] - [0;32mOptimizer: Adam (
+Parameter Group 0
+    amsgrad: False
+    betas: (0.9, 0.999)
+    eps: 1e-08
+    initial_lr: 0.001
+    lr: 0.001
+    weight_decay: 0
+)[0m
+[2025-04-13 14:04:45,659][torch_points3d.utils.colors][INFO] - [0;32mLearning Rate Scheduler: ExponentialLR({'gamma': 0.9885}, update_scheduler_on=on_epoch)[0m
+[2025-04-13 14:04:45,659][torch_points3d.utils.colors][INFO] - [0;32mBatchNorm Scheduler: BNMomentumScheduler(base_momentum: 0.1, update_scheduler_on=on_epoch)[0m
+[2025-04-13 14:04:45,659][torch_points3d.utils.colors][INFO] - [0;32mAccumulated gradients: None[0m
+[2025-04-13 14:04:45,662][torch_points3d.trainer][INFO] - Model size = 11872075
+[2025-04-13 14:04:45,672][torch_points3d.datasets.base_dataset][INFO] - Available stage selection datasets: [0;95m ['test'] [0m
+[2025-04-13 14:04:45,672][torch_points3d.datasets.base_dataset][INFO] - The models will be selected using the metrics on following dataset: [0;95m test [0m
+[2025-04-13 14:04:50,991][torch_points3d.trainer][INFO] - EPOCH 100 / 101
+[2025-04-13 14:04:50,994][torch_points3d.visualization.visualizer][WARNING] - Number of samples to save is higher than the number of available elements
+[2025-04-13 14:05:09,862][torch_points3d.trainer][INFO] - Learning rate = 0.000989
+[2025-04-13 14:10:39,180][torch_points3d.utils.colors][INFO] - [0;94mins_dist_loss: 0.040741268545389175 -> 0.0, ins_reg_loss: 0.0031658958178013563 -> 0.0017947594169527292[0m
+[2025-04-13 14:16:10,565][torch_points3d.utils.colors][INFO] - [0;94mins_dist_loss: 0.0 -> 0.0, ins_reg_loss: 0.0017947594169527292 -> 0.0017947594169527292[0m

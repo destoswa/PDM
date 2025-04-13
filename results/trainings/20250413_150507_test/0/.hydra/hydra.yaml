@@ -1,6 +1,6 @@
 hydra:
   run:
-    dir: ../../results/trainings/${now:%Y%m%d_%H%M%S}_test/0
+    dir: ../../results/trainings/20250413_150507_test/0
   sweep:
     dir: ???
     subdir: ???
@@ -112,11 +112,12 @@ hydra:
     - model_name=PointGroup-PAPER
     - training=treeins
     - job_name=treeins_my_first_run
-    - epochs=102
+    - epochs=1
     - batch_size=2
+    - data.sample_per_epoch=10
   job:
     name: train
-    override_dirname: batch_size=2,data=panoptic/treeins_rad8,epochs=102,job_name=treeins_my_first_run,model_name=PointGroup-PAPER,models=panoptic/area4_ablation_3heads_5,task=panoptic,training=treeins
+    override_dirname: batch_size=2,data.sample_per_epoch=10,data=panoptic/treeins_rad8,epochs=1,job_name=treeins_my_first_run,model_name=PointGroup-PAPER,models=panoptic/area4_ablation_3heads_5,task=panoptic,training=treeins
     id: ???
     num: ???
     config_name: config

@@ -58,7 +58,7 @@ cp "$SCRIPT_DIR/conf/eval.yaml" "$DEST_DIR"
 python3 "$SCRIPT_DIR/nibio_inference/modify_eval.py" "$DEST_DIR/eval.yaml" "$DEST_DIR/utm2local" "$DEST_DIR"
 
 # clear cache
-python3 "$SCRIPT_DIR/nibio_inference/clear_cache.py" --eval_yaml "$DEST_DIR/eval.yaml"
+# python3 "$SCRIPT_DIR/nibio_inference/clear_cache.py" --eval_yaml "$DEST_DIR/eval.yaml"
 
 # Run the inference script with the config file
 python3 eval.py --config-name "$DEST_DIR/eval.yaml"
