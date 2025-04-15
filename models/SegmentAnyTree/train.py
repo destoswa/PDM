@@ -1,3 +1,5 @@
+import pandas as pd
+import numpy as np
 import hydra
 from hydra.core.global_hydra import GlobalHydra
 from omegaconf import OmegaConf
@@ -15,7 +17,12 @@ def main(cfg):
     setattr(cfg, 'is_training',True)
     trainer = Trainer(cfg)
     # return
-    trainer.train()
+    metrics = trainer.train()
+    print("=====\nMETRICS:\n", metrics)
+    # update metrics file
+    # df_metrics = pd.read_csv(cfg.train_metrics_src, sep=';')
+    # new_lines = []
+    # for epoch, val
     #
     # # https://github.com/facebookresearch/hydra/issues/440
     GlobalHydra.get_state().clear()

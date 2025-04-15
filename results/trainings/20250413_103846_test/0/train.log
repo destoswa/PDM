@@ -1,6 +1,0 @@
-[2025-04-13 10:38:51,253][torch_points3d.trainer][INFO] - DEVICE : cuda
-[2025-04-13 10:39:01,192][torch_points3d.metrics.model_checkpoint][INFO] - Loading checkpoint from /home/pdm/models/SegmentAnyTree/model_file/PointGroup-PAPER.pt
-[2025-04-13 10:40:54,199][torch_points3d.trainer][INFO] - DEVICE : cuda
-[2025-04-13 10:41:03,349][torch_points3d.metrics.model_checkpoint][INFO] - Loading checkpoint from /home/pdm/models/SegmentAnyTree/model_file/PointGroup-PAPER.pt
-[2025-04-13 10:42:50,301][torch_points3d.trainer][INFO] - DEVICE : cuda
-[2025-04-13 10:42:58,995][torch_points3d.metrics.model_checkpoint][INFO] - Loading checkpoint from /home/pdm/models/SegmentAnyTree/model_file/PointGroup-PAPER.pt

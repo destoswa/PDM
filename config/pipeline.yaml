@@ -1,6 +1,7 @@
 pipeline:
   root_src: /home/pdm
-  num_loops: 3
+  results_src: /home/pdm/results
+  num_loops: 1
   train_frac: 0.7
   val_frac: 0.15
   test_frac: 0.15

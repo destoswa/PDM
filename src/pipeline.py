@@ -16,7 +16,7 @@ from omegaconf import OmegaConf
 from src.format_conversions import convert_all_in_folder
 from src.pseudo_labels_creation import update_attribute_where_cluster_match
 from scipy.spatial import cKDTree
-from src.stats import compute_classification_results
+from src.metrics import compute_classification_results, compute_panoptic_quality, compute_mean_iou
 # from models.KDE_classifier.inference import inference
 
 
@@ -31,12 +31,11 @@ class Pipeline():
         self.data_src = cfg.dataset.data_src
         self.file_format = cfg.dataset.file_format
         self.tiles = []
-        state_columns = ['name', 'num_loop', 'is_problematic', 'is_empty', 'num_predictions', 'num_garbage', 'num_multi', 'num_single']
-        self.tiles_state = pd.DataFrame(columns=state_columns)
 
         # config regarding pipeline
         self.num_loops = cfg.pipeline.loop_iteration
         self.current_loop = 0
+        self.results_src = ""
 
         # config regarding inference
         self.inference = cfg.segmenter.inference
@@ -53,7 +52,18 @@ class Pipeline():
         self.training = cfg.segmenter.training
         self.model_checkpoint_src = cfg.segmenter.inference.model_checkpoint_src
         self.current_epoch = 0
+        self.training.result_src_name = datetime.now().strftime(r"%Y%m%d_%H%M%S_") + self.training.result_src_name_suffixe
 
+        # config regarding metrics
+        #   _ training metrics
+        training_metrics_columns = ['num_loop', 'num_epoch', 'loss', 'offset_norm_loss', 'offset_dir_loss', 'ins_loss', 'ins_var_loss', 'ins_dist_loss', 'ins_reg_loss', 'semantic_loss', 'score_loss', 'acc', 'macc', 'mIoU', 'pos', 'neg', 'Iacc', 'cov', 'wcov', 'mIPre', 'mIRec', 'F1', 'map']
+        self.training_metrics = pd.DataFrame(columns=training_metrics_columns)
+        self.training_metrics_src = os.path.join(self.training.result_training_dir, self.training.result_src_name, 'training_metrics.csv')
+
+        #   _ inference metrics
+        inference_metrics_columns = ['name', 'num_loop', 'is_problematic', 'is_empty', 'num_predictions', 'num_garbage', 'num_multi', 'num_single', 'PQ', 'SQ', 'RQ', 'Pre', 'Rec', 'mIoU']
+        self.inference_metrics = pd.DataFrame(columns=inference_metrics_columns)
+        self.inference_metrics_src = os.path.join(self.training.result_training_dir, self.training.result_src_name, 'inference_metrics.csv')
 
     @staticmethod
     def unzip_laz_files(zip_path, extract_to=".", delete_zip=True):
@@ -323,12 +333,8 @@ class Pipeline():
         os.mkdir(temp_seg_src)
 
         list_files = [x for x in os.listdir(os.path.join(self.root_src, self.data_src)) if x.endswith(self.file_format) and x not in self.problematic_tiles]
-        if self.classifier.processes.do_remove_empty_tiles:
+        if self.classification.processes.do_remove_empty_tiles:
             list_files = [x for x in list_files if x not in self.empty_tiles]
-        for tile_problem in self.problematic_tiles:
-            self.tiles_state.loc[self.tiles_state.name == tile_problem and self.tiles_state.loop == self.current_loop, "is_problematic"] = 1
-        for tile_empty in self.empty_tiles:
-            self.tiles_state.loc[self.tiles_state.name == tile_empty and self.tiles_state.loop == self.current_loop, "is_empty"] = 1
 
         # loops on samples:
         for _, file in tqdm(enumerate(list_files), total=len(list_files), desc="Processing"):
@@ -369,11 +375,12 @@ class Pipeline():
             os.remove(temp_file_src)
         # removing temp folder
         shutil.rmtree(temp_seg_src)
-        
+
         if len(self.problematic_tiles) > 0:
             print("========\nProblematic tiles:")
             for f in self.problematic_tiles:
                 print("\t- ", f)
+                self.self.inference_metrics.loc[(self.inference_metrics.name == f) & (self.inference_metrics.num_loop == self.current_loop), "is_problematic"] = 1
 
         return self.problematic_tiles
     
@@ -416,12 +423,20 @@ class Pipeline():
                     os.remove(os.path.join(output_folder, file))
 
             # Add stats to state variable
-            (num_garbage, num_multi, num_single) = compute_classification_results(os.path.join(dir_target, 'results'))
-            self.tiles_state.loc[self.tiles_state.name == file and self.tiles_state.loop == self.current_loop, "num_garbage"] = num_garbage
-            self.tiles_state.loc[self.tiles_state.name == file and self.tiles_state.loop == self.current_loop, "num_multi"] = num_multi
-            self.tiles_state.loc[self.tiles_state.name == file and self.tiles_state.loop == self.current_loop, "num_single"] = num_single
-            self.tiles_state.loc[self.tiles_state.name == file and self.tiles_state.loop == self.current_loop, "num_predictions"] = num_garbage + num_multi + num_single
-                
+            [num_garbage, num_multi, num_single] = compute_classification_results(os.path.join(dir_target, 'results'))
+            original_file = file.split('_out')[0] + '.' + self.file_format
+            print("-"*20)
+            print(num_garbage)
+            print(num_multi)
+            print(num_single)
+            print(original_file)
+            print(self.current_loop)
+            print("-"*20)
+            self.inference_metrics.loc[(self.inference_metrics.name == original_file) & (self.inference_metrics.num_loop == self.current_loop), "num_garbage"] = num_garbage
+            self.inference_metrics.loc[(self.inference_metrics.name == original_file) & (self.inference_metrics.num_loop == self.current_loop), "num_multi"] = num_multi
+            self.inference_metrics.loc[(self.inference_metrics.name == original_file) & (self.inference_metrics.num_loop == self.current_loop), "num_single"] = num_single
+            self.inference_metrics.loc[(self.inference_metrics.name == original_file) & (self.inference_metrics.num_loop == self.current_loop), "num_predictions"] = num_garbage + num_multi + num_single
+            
     def create_pseudo_labels(self, verbose=False):
         print("Creating pseudo labels:")
         list_folders = [x for x in os.listdir(self.preds_src) if os.path.abspath(os.path.join(self.preds_src, x)) and x.endswith('instance')]
@@ -505,7 +520,7 @@ class Pipeline():
         return mask, self.classified_clusters[row_id][1]
 
     def prepare_data(self):
-        print("DATA SRC: ", self.data_src)
+        print("Prepare data:")
         self.run_subprocess(
             src_script="/home/pdm/models/SegmentAnyTree/",
             script_name="./run_sample_data_conversion.sh",
@@ -513,6 +528,7 @@ class Pipeline():
             )
 
     def train(self):
+        print("Training:")
         # modify dataset config file
         Pipeline.change_var_val_yaml(
             src_yaml=self.training.config_data_src,
@@ -521,12 +537,13 @@ class Pipeline():
         )
 
         # modify results directory
-        if self.training.result_src_full_name == 'None':
-            self.training.result_src_full_name = datetime.now().strftime(r"%Y%m%d_%H%M%S_") + self.training.result_src_name_suffixe
+        # if self.training.result_src_full_name == None:
+        #     self.training.result_src_full_name = datetime.now().strftime(r"%Y%m%d_%H%M%S_") + self.training.result_src_name_suffixe
+
         Pipeline.change_var_val_yaml(
             src_yaml=self.training.config_results_src,
             var='hydra/run/dir',
-            val="../../" + os.path.normpath(self.training.result_training_dir) + "/" + self.training.result_src_full_name + '/' + str(self.current_loop),
+            val="../../" + os.path.normpath(self.training.result_training_dir) + "/" + self.training.result_src_name + '/' + str(self.current_loop),
         )
 
         # run training script
@@ -539,5 +556,5 @@ class Pipeline():
             )
         
         # update path to checkpoint
-        self.model_checkpoint_src = os.path.join(self.cfg.pipeline.root_src, os.path.normpath(self.training.result_training_dir) + "/" + self.training.result_src_full_name + '/' + str(self.current_loop))
+        self.model_checkpoint_src = os.path.join(self.cfg.pipeline.root_src, os.path.normpath(self.training.result_training_dir) + "/" + self.training.result_src_name + '/' + str(self.current_loop))
         

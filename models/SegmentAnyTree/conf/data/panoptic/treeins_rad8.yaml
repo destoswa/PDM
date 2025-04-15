@@ -3,7 +3,7 @@ data:
   - panoptic/default
   task: panoptic
   class: treeins.TreeinsFusedDataset
-  dataroot: /home/pdm/data/dataset_tiles_100m/temp/loops/2/
+  dataroot: /home/pdm/data/dataset_tiles_100m/tiles/loops/0/
   sample_per_epoch: 3000
   forest_regions: []
   fold: []

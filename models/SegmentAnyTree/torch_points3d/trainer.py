@@ -11,6 +11,7 @@ import wandb
 import numpy as np
 import random
 from omegaconf import OmegaConf
+from tqdm import tqdm
 
 # Import building function for model and dataset
 from torch_points3d.datasets.dataset_factory import instantiate_dataset
@@ -45,8 +46,6 @@ class Trainer:
 
     @staticmethod
     def print_cfg(cfg, num_tab=0):
-        print("yaaaaaaaaa")
-        # print(OmegaConf.to_object(cfg))
         for key, val in cfg.items():
             if isinstance(val, dict):
                 print("\t" * num_tab, f"{key}:")
@@ -171,10 +170,11 @@ class Trainer:
     def train(self):
         self._is_training = True
 
+        metrics = {}
         for epoch in range(self._checkpoint.start_epoch, self._checkpoint.start_epoch + self._cfg.training.epochs):
             log.info("EPOCH %i / %i", epoch, self._checkpoint.start_epoch + self._cfg.training.epochs)
-
-            self._train_epoch(epoch)
+            metrics[epoch] = {}
+            metrics[epoch]['train'] = self._train_epoch(epoch)
 
             if self.profiling:
                 return 0
@@ -183,15 +183,17 @@ class Trainer:
                 continue
 
             if self._dataset.has_val_loader:
-                self._test_epoch(epoch, "val")
+                metrics[epoch]['val'] = self._test_epoch(epoch, "val")
 
             if self._dataset.has_test_loaders:
-                self._test_epoch(epoch, "test")
+                metrics[epoch]['test'] = self._test_epoch(epoch, "test")
 
         # Single test evaluation in resume case
         if self._checkpoint.start_epoch > self._cfg.training.epochs:
             if self._dataset.has_test_loaders:
                 self._test_epoch(epoch, "test")
+
+        return metrics
 
     def eval(self, stage_name=""):
         self._is_training = False
@@ -207,6 +209,7 @@ class Trainer:
 
     def _finalize_epoch(self, epoch):
         self._tracker.finalise(**self.tracker_options)
+        metrics = None
         if self._is_training:
             metrics = self._tracker.publish(epoch)
             self._checkpoint.save_best_models_under_current_metrics(self._model, metrics, self._tracker.metric_func)
@@ -214,6 +217,10 @@ class Trainer:
                 Wandb.add_file(self._checkpoint.checkpoint_path)
             if self._tracker._stage == "train":
                 log.info("Learning rate = %f" % self._model.learning_rate)
+        print("="*10)
+        print("METRICS: ", metrics)
+        print("="*10)
+        return metrics
 
     def _train_epoch(self, epoch: int):
 
@@ -225,6 +232,7 @@ class Trainer:
         iter_data_time = time.time()
         with Ctq(train_loader) as tq_train_loader:
             for i, data in enumerate(tq_train_loader):
+            # for i, data in tqdm(enumerate(train_loader)):
                 t_data = time.time() - iter_data_time
                 iter_start_time = time.time()
                 self._model.set_input(data, self._device)
@@ -252,8 +260,7 @@ class Trainer:
                 if self.profiling:
                     if i > self.num_batches:
                         return 0
-
-        self._finalize_epoch(epoch)
+        return self._finalize_epoch(epoch)
 
     def _test_epoch(self, epoch, stage_name: str):
         voting_runs = self._cfg.get("voting_runs", 1)
@@ -266,6 +273,7 @@ class Trainer:
         if self.enable_dropout:
             self._model.enable_dropout_in_eval()
 
+        print("LOADERS:", loaders)
         for loader in loaders:
             stage_name = loader.dataset.name
             self._tracker.reset(stage_name)
@@ -276,10 +284,11 @@ class Trainer:
             ):  # No label, no submission -> do nothing
                 log.warning("No forward will be run on dataset %s." % stage_name)
                 continue
-
+            metric = {}
             for i in range(voting_runs):
                 with Ctq(loader) as tq_loader:
                     for data in tq_loader:
+                    # for _, data in tqdm(enumerate(loader)):
                         with torch.no_grad():
                             self._model.set_input(data, self._device)
                             with torch.cuda.amp.autocast(enabled=self._model.is_mixed_precision()):
@@ -297,7 +306,8 @@ class Trainer:
                             if i > self.num_batches:
                                 return 0
 
-            self._finalize_epoch(epoch)
+            metric = self._finalize_epoch(epoch)
+        return metric
             # self._tracker.print_summary()
 
     def set_seed(self, seed):
