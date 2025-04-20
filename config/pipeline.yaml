@@ -1,7 +1,10 @@
 pipeline:
   root_src: /home/pdm
   results_src: /home/pdm/results
-  num_loops: 1
+  num_loops: 3
   train_frac: 0.7
   val_frac: 0.15
   test_frac: 0.15
+  processes:
+    upgrade_ground: True
+    garbage_as_grey: True

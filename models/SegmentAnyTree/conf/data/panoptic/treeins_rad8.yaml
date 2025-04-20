@@ -3,7 +3,7 @@ data:
   - panoptic/default
   task: panoptic
   class: treeins.TreeinsFusedDataset
-  dataroot: /home/pdm/data/dataset_tiles_100m/tiles/loops/0/
+  dataroot: /home/pdm/results/trainings/20250420_181631_test/pseudo_labels/
   sample_per_epoch: 3000
   forest_regions: []
   fold: []

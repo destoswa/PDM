@@ -30,12 +30,15 @@ class Pipeline():
         # config regarding dataset
         self.data_src = cfg.dataset.data_src
         self.file_format = cfg.dataset.file_format
-        self.tiles = []
+        self.tiles_all = [file for file in os.listdir(self.data_src) if file.endswith(self.file_format)]
+        self.tiles_to_process = self.tiles_all.copy()
 
         # config regarding pipeline
         self.num_loops = cfg.pipeline.loop_iteration
         self.current_loop = 0
         self.results_src = ""
+        self.upgrade_ground = cfg.pipeline.processes.upgrade_ground
+        self.garbage_as_grey = cfg.pipeline.processes.garbage_as_grey
 
         # config regarding inference
         self.inference = cfg.segmenter.inference
@@ -53,17 +56,44 @@ class Pipeline():
         self.model_checkpoint_src = cfg.segmenter.inference.model_checkpoint_src
         self.current_epoch = 0
         self.training.result_src_name = datetime.now().strftime(r"%Y%m%d_%H%M%S_") + self.training.result_src_name_suffixe
+        # self.training.result_src_name = "20250417_133119_test"
+        self.result_dir = os.path.join(self.root_src, self.training.result_training_dir, self.training.result_src_name)
+        self.result_pseudo_labels_dir = os.path.join(self.result_dir, 'pseudo_labels/')
+
+        #   _create result dirs
+        os.makedirs(self.result_dir, exist_ok=True)
+        os.makedirs(self.result_pseudo_labels_dir, exist_ok=True)
+
+        #   _copy files
+        print("Copying files")
+        for _, file in tqdm(enumerate(self.tiles_to_process), total=len(self.tiles_to_process), desc="Process"):
+            shutil.copyfile(
+                os.path.join(self.data_src, file),
+                os.path.join(self.result_pseudo_labels_dir, file)
+            )
 
         # config regarding metrics
         #   _ training metrics
-        training_metrics_columns = ['num_loop', 'num_epoch', 'loss', 'offset_norm_loss', 'offset_dir_loss', 'ins_loss', 'ins_var_loss', 'ins_dist_loss', 'ins_reg_loss', 'semantic_loss', 'score_loss', 'acc', 'macc', 'mIoU', 'pos', 'neg', 'Iacc', 'cov', 'wcov', 'mIPre', 'mIRec', 'F1', 'map']
+        training_metrics_columns = [
+            'num_loop', 'num_epoch', 'stage', 'loss', 'offset_norm_loss', 
+            'offset_dir_loss', 'ins_loss', 'ins_var_loss', 'ins_dist_loss', 
+            'ins_reg_loss', 'semantic_loss', 'score_loss', 'acc', 'macc', 
+            'mIoU', 'pos', 'neg', 'Iacc', 'cov', 'wcov', 'mIPre', 'mIRec', 
+            'F1', 'map',
+            ]
         self.training_metrics = pd.DataFrame(columns=training_metrics_columns)
-        self.training_metrics_src = os.path.join(self.training.result_training_dir, self.training.result_src_name, 'training_metrics.csv')
+        self.training_metrics_src = os.path.join(self.root_src, self.training.result_training_dir, self.training.result_src_name, 'training_metrics.csv')
+        self.training_metrics.to_csv(self.training_metrics_src, sep=';', index=False)
 
         #   _ inference metrics
-        inference_metrics_columns = ['name', 'num_loop', 'is_problematic', 'is_empty', 'num_predictions', 'num_garbage', 'num_multi', 'num_single', 'PQ', 'SQ', 'RQ', 'Pre', 'Rec', 'mIoU']
+        inference_metrics_columns = [
+            'name', 'num_loop', 'is_problematic', 'is_empty', 'num_predictions', 
+            'num_garbage', 'num_multi', 'num_single', 'PQ', 'SQ', 'RQ', 'Pre', 
+            'Rec', 'mIoU',
+            ]
         self.inference_metrics = pd.DataFrame(columns=inference_metrics_columns)
-        self.inference_metrics_src = os.path.join(self.training.result_training_dir, self.training.result_src_name, 'inference_metrics.csv')
+        self.inference_metrics_src = os.path.join(self.root_src, self.training.result_training_dir, self.training.result_src_name, 'inference_metrics.csv')
+        self.inference_metrics.to_csv(self.inference_metrics_src, sep=';', index=False)
 
     @staticmethod
     def unzip_laz_files(zip_path, extract_to=".", delete_zip=True):
@@ -332,15 +362,30 @@ class Pipeline():
             shutil.rmtree(temp_seg_src)
         os.mkdir(temp_seg_src)
 
-        list_files = [x for x in os.listdir(os.path.join(self.root_src, self.data_src)) if x.endswith(self.file_format) and x not in self.problematic_tiles]
-        if self.classification.processes.do_remove_empty_tiles:
-            list_files = [x for x in list_files if x not in self.empty_tiles]
 
+
+        # list_files = [x for x in os.listdir(os.path.join(self.root_src, self.data_src)) if x.endswith(self.file_format) and x not in self.problematic_tiles]
+        # if self.classification.processes.do_remove_empty_tiles:
+        #     list_files = [x for x in list_files if x not in self.empty_tiles]
+
+        # for _, file in tqdm(enumerate(list_files), total=len(list_files), desc="Processing"):
+
+
+
+        # creates pack of samples to infer on
+        list_pack_of_tiles = [self.tiles_to_process[x:min(y,len(self.tiles_to_process))] for x, y in zip(
+            range(0, len(self.tiles_to_process) - self.inference.num_tiles_per_inference, self.inference.num_tiles_per_inference),
+            range(self.inference.num_tiles_per_inference, len(self.tiles_to_process), self.inference.num_tiles_per_inference),
+            )]
+        if list_pack_of_tiles[-1][-1] != self.tiles_to_process[-1]:
+            list_pack_of_tiles.append(self.tiles_to_process[(len(list_pack_of_tiles)*self.inference.num_tiles_per_inference)::])
+        
         # loops on samples:
-        for _, file in tqdm(enumerate(list_files), total=len(list_files), desc="Processing"):
+        for _, file in tqdm(enumerate(self.tiles_to_process), total=len(self.tiles_to_process), desc="Processing"):
             if verbose:
                 print("===\tProcessing file: ", file, "\t===")
-            original_file_src = os.path.join(os.path.join(self.root_src, self.data_src, file))
+            # original_file_src = os.path.join(os.path.join(self.root_src, self.data_src, file))
+            original_file_src = os.path.join(os.path.join(self.result_pseudo_labels_dir, self.data_src, file))
             temp_file_src = os.path.join(os.path.join(temp_seg_src, file))
             shutil.copyfile(
                 original_file_src,
@@ -357,7 +402,7 @@ class Pipeline():
             # catch errors
             if return_code != 0:
                 if verbose:
-                    print("Problem with this tile")
+                    print(f"Problem with tile {file}")
                 self.problematic_tiles.append(file)
             else:
                 # unzip results
@@ -368,21 +413,48 @@ class Pipeline():
                     extract_to=self.preds_src,
                     delete_zip=True
                     )
+
+                # check if empty
+                src_pred_file = os.path.join(self.preds_src, file.split('.')[0] + '_out.' + self.file_format)
+                tile = laspy.read(src_pred_file)
+                num_instances = len(set(tile.PredInstance))
+                if num_instances == 1:
+                    if verbose:
+                        print(f"Empty tile: {file}")
+                    self.empty_tiles.append(file)
+                    if self.classification.processes.do_remove_empty_tiles:
+                        os.remove(os.path.join(src_pred_file))
+                        # if file in self.tiles_to_process:
+                        #     self.tiles_to_process.remove(file)
                 if verbose:
                     print("Segmentation done!")
 
             # removing temp file
             os.remove(temp_file_src)
+
+        # update tiles to process
+        for tile in self.problematic_tiles:
+            if tile in self.tiles_to_process:
+                self.tiles_to_process.remove(tile)
+        if self.classification.processes.do_remove_empty_tiles:
+            for tile in self.empty_tiles:
+                if tile in self.tiles_to_process:
+                    self.tiles_to_process.remove(tile)
+
         # removing temp folder
         shutil.rmtree(temp_seg_src)
 
+        # update segmentation state
         if len(self.problematic_tiles) > 0:
             print("========\nProblematic tiles:")
             for f in self.problematic_tiles:
                 print("\t- ", f)
-                self.self.inference_metrics.loc[(self.inference_metrics.name == f) & (self.inference_metrics.num_loop == self.current_loop), "is_problematic"] = 1
-
-        return self.problematic_tiles
+                self.inference_metrics.loc[(self.inference_metrics.name == f) & (self.inference_metrics.num_loop == self.current_loop), "is_problematic"] = 1
+        if len(self.empty_tiles) > 0:
+            print("========\nEmpty tiles:")
+            for f in self.empty_tiles:
+                print("\t- ", f)
+                self.inference_metrics.loc[(self.inference_metrics.name == f) & (self.inference_metrics.num_loop == self.current_loop), "is_empty"] = 1
     
     def classify(self, verbose=False):
         print("Starting classification:")
@@ -421,28 +493,14 @@ class Pipeline():
             for file in os.listdir(output_folder):
                 if file.endswith('.pcd'):
                     os.remove(os.path.join(output_folder, file))
-
-            # Add stats to state variable
-            [num_garbage, num_multi, num_single] = compute_classification_results(os.path.join(dir_target, 'results'))
-            original_file = file.split('_out')[0] + '.' + self.file_format
-            print("-"*20)
-            print(num_garbage)
-            print(num_multi)
-            print(num_single)
-            print(original_file)
-            print(self.current_loop)
-            print("-"*20)
-            self.inference_metrics.loc[(self.inference_metrics.name == original_file) & (self.inference_metrics.num_loop == self.current_loop), "num_garbage"] = num_garbage
-            self.inference_metrics.loc[(self.inference_metrics.name == original_file) & (self.inference_metrics.num_loop == self.current_loop), "num_multi"] = num_multi
-            self.inference_metrics.loc[(self.inference_metrics.name == original_file) & (self.inference_metrics.num_loop == self.current_loop), "num_single"] = num_single
-            self.inference_metrics.loc[(self.inference_metrics.name == original_file) & (self.inference_metrics.num_loop == self.current_loop), "num_predictions"] = num_garbage + num_multi + num_single
             
     def create_pseudo_labels(self, verbose=False):
         print("Creating pseudo labels:")
         list_folders = [x for x in os.listdir(self.preds_src) if os.path.abspath(os.path.join(self.preds_src, x)) and x.endswith('instance')]
         for _, child in tqdm(enumerate(list_folders), total=len(list_folders), desc='Processing'):
             # load original file
-            original_file_src = os.path.join(self.data_src, child.split('_out')[0] + '.' + self.file_format)
+            # original_file_src = os.path.join(self.data_src, child.split('_out')[0] + '.' + self.file_format)
+            original_file_src = os.path.join(self.result_pseudo_labels_dir, child.split('_out')[0] + '.' + self.file_format)
             original_file = laspy.read(original_file_src)
 
             # load prediction file
@@ -464,7 +522,7 @@ class Pipeline():
 
             coords_A = np.stack((original_file.x, original_file.y, original_file.z), axis=1)
             coords_original_file_view = coords_A.view([('', coords_A.dtype)] * 3).reshape(-1)
-        
+
             # add pseudo-labels attribute if non-existant
             #   _add instance
             if 'treeID' not in list(original_file.point_format.dimension_names):
@@ -476,12 +534,13 @@ class Pipeline():
                     )
                 )
             
-            # reset values of pseudo-labels
-            new_file.treeID = np.zeros(len(new_file), dtype="f4")
-            new_file.classification = np.zeros(len(new_file), dtype="f4")
+                # reset values of pseudo-labels
+                new_file.treeID = np.zeros(len(new_file), dtype="f4")
+                new_file.classification = np.zeros(len(new_file), dtype="f4")
 
             # set ground based on semantic pred
-            new_file.classification[pred_file.PredSemantic == 0] = 1
+            if self.upgrade_ground or self.current_loop == 0:
+                new_file.classification[pred_file.PredSemantic == 0] = 1
                 
             # load all clusters
             self.classified_clusters = []
@@ -500,15 +559,28 @@ class Pipeline():
             
             # Update the original file based on results and update the csv file with ref to trees
             for id_tree, (mask, value) in tqdm(enumerate(results), total=len(results), desc='temp', disable=~verbose):
-                # print(value)
+                """
+                value to label:
+                    0: garbage
+                    1: multi
+                    2: single
+                classification to label:
+                    0: grey
+                    1: ground
+                    4: tree
+                """
                 # set instance p-label
                 new_file.treeID[mask] = id_tree
                 
                 # set semantic p-label
-                if value == 1:
+                if value == 1 or (self.garbage_as_grey and value == 0):
                     new_file.classification[mask] = 0
-                else:
+                elif value == 0 and not self.garbage_as_grey:
+                    new_file.classification[mask] = 1
+                elif value == 2:
                     new_file.classification[mask] = 4
+                else:
+                    raise ValueError("Problem in the setting of the semantic pseudo-labels!")
                 
             # saving back original file
             new_file.write(original_file_src)
@@ -519,12 +591,51 @@ class Pipeline():
         
         return mask, self.classified_clusters[row_id][1]
 
+    def stats_on_tiles(self):
+        print("Computing stats on tiles")
+        # lst_files = [x for x in os.listdir(self.data_src) if x.endswith(self.file_format) and x not in self.problematic_tiles]
+        # if self.classification.processes.do_remove_empty_tiles and len(self.empty_tiles) > 0:
+        #     lst_files = [f for f in lst_files if f not in self.empty_tiles]
+
+        # for _, file in tqdm(enumerate(lst_files), total=len(lst_files), desc="processing"):
+        for _, file in tqdm(enumerate(self.tiles_to_process), total=len(self.tiles_to_process), desc="processing"):
+            # Add stats to state variable
+            dir_target = self.preds_src + '/' + file.split('/')[-1].split('.')[0] + "_out_split_instance"
+            [num_garbage, num_multi, num_single] = compute_classification_results(os.path.join(dir_target, 'results'))
+            self.inference_metrics.loc[(self.inference_metrics.name == file) & (self.inference_metrics.num_loop == self.current_loop), "num_garbage"] = num_garbage
+            self.inference_metrics.loc[(self.inference_metrics.name == file) & (self.inference_metrics.num_loop == self.current_loop), "num_multi"] = num_multi
+            self.inference_metrics.loc[(self.inference_metrics.name == file) & (self.inference_metrics.num_loop == self.current_loop), "num_single"] = num_single
+            self.inference_metrics.loc[(self.inference_metrics.name == file) & (self.inference_metrics.num_loop == self.current_loop), "num_predictions"] = num_garbage + num_multi + num_single
+
+            # metrics on pseudo labels
+            tile_original = laspy.read(os.path.join(self.result_pseudo_labels_dir, file))
+            tile_preds = laspy.read(os.path.join(self.data_src, 'preds', file.split('.')[0] + '_out.' + self.file_format))
+
+            # match the original with the pred
+            Pipeline.remove_duplicates(tile_original)
+            Pipeline.remove_duplicates(tile_preds)
+            Pipeline.match_pointclouds(tile_original, tile_preds)
+
+            gt_instances = tile_original.treeID
+            pred_instances = tile_preds.PredInstance
+            PQ, SQ, RQ, tp, fp, fn = compute_panoptic_quality(gt_instances, pred_instances)
+            metrics = {
+                'PQ': PQ,
+                'SQ': SQ,
+                'RQ': RQ,
+                'Rec': round(tp/(tp + fn), 2) if tp + fn > 0 else 0,
+                'Pre': round(tp/(tp + fp),2) if tp + fp > 0 else 0,
+            }
+            for metric_name, metric_val in metrics.items():
+                self.inference_metrics.loc[(self.inference_metrics.name == file) & (self.inference_metrics.num_loop == self.current_loop), metric_name] = metric_val
+
     def prepare_data(self):
         print("Prepare data:")
         self.run_subprocess(
             src_script="/home/pdm/models/SegmentAnyTree/",
             script_name="./run_sample_data_conversion.sh",
-            params= [self.data_src],
+            # params= [self.data_src],
+            params= [self.result_pseudo_labels_dir],
             )
 
     def train(self):
@@ -533,13 +644,10 @@ class Pipeline():
         Pipeline.change_var_val_yaml(
             src_yaml=self.training.config_data_src,
             var='data/dataroot',
-            val=os.path.join(self.data_src),
+            val=os.path.join(self.result_pseudo_labels_dir),
         )
 
         # modify results directory
-        # if self.training.result_src_full_name == None:
-        #     self.training.result_src_full_name = datetime.now().strftime(r"%Y%m%d_%H%M%S_") + self.training.result_src_name_suffixe
-
         Pipeline.change_var_val_yaml(
             src_yaml=self.training.config_results_src,
             var='hydra/run/dir',
@@ -552,7 +660,9 @@ class Pipeline():
             script_name="./run_pipeline.sh",
             params= [self.training.num_trainings_per_loop, 
                      self.training.batch_size, 
-                     self.training.sample_per_epoch],
+                     self.training.sample_per_epoch,
+                     self.training_metrics_src,
+                     self.current_loop,],
             )
         
         # update path to checkpoint

@@ -18,6 +18,8 @@ def compute_panoptic_quality(gt_instances, pred_instances):
     :param pred_instances: List of sets, each containing point indices for a predicted instance.
     :return: PQ, SQ, RQ
     """
+    # convert inputs
+    gt_instances, pred_instances = format_segmentation_for_PQ(gt_instances, pred_instances)
 
     # gt_instances, pred_instances = get_segmentation(gt_instances, pred_instances)
     tp, fp, fn = 0, 0, 0
@@ -94,6 +96,29 @@ def get_segmentation(instance_list, semantic_list):
         semantic_format.append(set(list_points))
 
     return instances_format, semantic_format
+
+
+def format_segmentation_for_PQ(instance_gt, instance_pred):
+    gt_format = []
+    preds_format = []
+    
+    # Computing instances
+    for instance in set(instance_gt):
+        if instance == 0: continue
+        list_points = [pos for pos, val in enumerate(instance_gt) if val == instance]
+        gt_format.append(set(list_points))
+
+    for instance in set(instance_pred):
+        if instance == 0: continue
+        list_points = [pos for pos, val in enumerate(instance_pred) if val == instance]
+        preds_format.append(set(list_points))
+
+    # Computing semantic
+    # for semantic in set(semantic_list):
+    #     list_points = [pos for pos, val in enumerate(semantic_list) if val == semantic]
+    #     semantic_format.append(set(list_points))
+
+    return gt_format, preds_format
 
 
 if __name__ == '__main__':

@@ -15,26 +15,26 @@ from src.pipeline import Pipeline
 
         
 
-def remove_duplicates(laz_file_src):
-    laz_file = laspy.read(laz_file_src)
-    # Find pairs of points
-    coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)),2).T
-    tree_B = cKDTree(coords)
-    pairs = tree_B.query_pairs(1e-2)
+# def remove_duplicates(laz_file_src):
+#     laz_file = laspy.read(laz_file_src)
+#     # Find pairs of points
+#     coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)),2).T
+#     tree_B = cKDTree(coords)
+#     pairs = tree_B.query_pairs(1e-2)
 
-    # Create the mask with dupplicates
-    mask = [True for i in range(len(coords))]
-    for pair in pairs:
-        mask[pair[1]] = False
+#     # Create the mask with dupplicates
+#     mask = [True for i in range(len(coords))]
+#     for pair in pairs:
+#         mask[pair[1]] = False
 
-    # Remove the dupplicates from the file
-    # print(len(laz_file))
-    # laz_file.points = laz_file.points[mask]
-    # print(len(laz_file))
-    # print(np.sum(mask))
-    # print("-------")
+#     # Remove the dupplicates from the file
+#     # print(len(laz_file))
+#     # laz_file.points = laz_file.points[mask]
+#     # print(len(laz_file))
+#     # print(np.sum(mask))
+#     # print("-------")
 
-    laz_file.write(laz_file_src)
+#     laz_file.write(laz_file_src)
 
 
 def main(cfg):
@@ -62,20 +62,17 @@ def main(cfg):
 
     # create pipeline
     pipeline = Pipeline(cfg) 
-
-    # prepare metrics files:
-    inference_metrics_columns = ['name', 'num_loop', 'is_problematic', 'is_empty', 'num_predictions', 'num_garbage', 'num_multi', 'num_single', 'PQ', 'SQ', 'RQ', 'Pre', 'Rec', 'mIoU']
-    inference_metrics = pd.DataFrame(columns=inference_metrics_columns).to_csv()
     
+    # start looping
     for loop in range(NUM_LOOPS):
         print(f"===== LOOP {loop + 1} / {NUM_LOOPS} =====")
         time_start_loop = time()
         pipeline.current_loop = loop
 
         # prepare architecture
-        # os.makedirs(os.path.join(DATA_SRC, f'loops/{loop}/'), exist_ok=True)
-        # for file in [f for f in os.listdir(DATA_SRC) if f.endswith(FILE_FORMAT)]:
-        #     shutil.copyfile(os.path.join(DATA_SRC, file), os.path.join(DATA_SRC, f'loops/{loop}/{file}'))
+        os.makedirs(os.path.join(DATA_SRC, f'loops/{loop}/'), exist_ok=True)
+        for file in [f for f in os.listdir(DATA_SRC) if f.endswith(FILE_FORMAT)]:
+            shutil.copyfile(os.path.join(DATA_SRC, file), os.path.join(DATA_SRC, f'loops/{loop}/{file}'))
         pipeline.data_src = os.path.join(DATA_SRC, f'loops/{loop}/')
         pipeline.preds_src = os.path.join(pipeline.data_src, 'preds')
         
@@ -100,16 +97,35 @@ def main(cfg):
         pipeline.inference_metrics = pd.concat([pipeline.inference_metrics, pd.DataFrame(loop_tiles_state)], axis=0)
 
         # segment
-        # lst_problematic_tiles = pipeline.segment(verbose=False)
-        lst_problematic_tiles = [4, 7, 12]
-        lst_files = [f for f in os.listdir(cfg.dataset.data_src) if f.endswith(FILE_FORMAT) and f not in lst_problematic_tiles]
+        print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
+        pipeline.segment(verbose=False)
+        # pipeline.problematic_tiles = ["color_grp_full_tile_4.laz", "color_grp_full_tile_7.laz", "color_grp_full_tile_12.laz"]
+        # for tile in pipeline.problematic_tiles:
+        #     if tile in pipeline.tiles_to_process:
+        #         pipeline.tiles_to_process.remove(tile)
+
+
+
+
+        # lst_files = [f for f in os.listdir(cfg.dataset.data_src) if f.endswith(FILE_FORMAT) and f not in pipeline.problematic_tiles]
+        # if pipeline.classification.processes.do_remove_empty_tiles and len(pipeline.empty_tiles) > 0:
+        #     lst_files = [f for f in lst_files if f not in pipeline.empty_tiles]
+
+        # # create csv for files referencing
+        # num_train = int(len(lst_files) * (TRAIN_FRAC + VAL_FRAC))
+        # train_test_split = random.sample(range(len(lst_files)), num_train)
+        # lst_files = [f for f in os.listdir(cfg.dataset.data_src) if f.endswith(FILE_FORMAT) and f not in pipeline.problematic_tiles]
+        # if pipeline.classification.processes.do_remove_empty_tiles and len(pipeline.empty_tiles) > 0:
+        #     lst_files = [f for f in lst_files if f not in pipeline.empty_tiles]
+
+
 
         # create csv for files referencing
-        num_train = int(len(lst_files) * (TRAIN_FRAC + VAL_FRAC))
-        train_test_split = random.sample(range(len(lst_files)), num_train)
+        num_train = int(len(pipeline.tiles_to_process) * (TRAIN_FRAC + VAL_FRAC))
+        train_test_split = random.sample(range(len(pipeline.tiles_to_process)), num_train)
         
         lst_split_data = []
-        for id_f, f in enumerate(lst_files):
+        for id_f, f in enumerate(pipeline.tiles_to_process):
             new_row = [ f, 'ARPETTE']
             if id_f in train_test_split:
                 new_row.append('train')
@@ -118,19 +134,21 @@ def main(cfg):
             lst_split_data.append(new_row)
 
         df_split_data = pd.DataFrame(columns=['path', 'folder', 'split'], data=lst_split_data)
-        df_split_data.to_csv(os.path.join(pipeline.data_src, 'data_split_metadata.csv'), sep=',', index=False)
+        df_split_data.to_csv(os.path.join(pipeline.result_pseudo_labels_dir, 'data_split_metadata.csv'), sep=',', index=False)
 
+        print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
         # classify
-        pipeline.classify(verbose=True)
+        pipeline.classify(verbose=False)
+        print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
 
         # create pseudo-labels
-        # pipeline.create_pseudo_labels(verbose=False)
-        # pipeline.prepare_data()
+        pipeline.create_pseudo_labels(verbose=False)
 
-        # compute stats
-
+        # compute stats on tiles
+        pipeline.stats_on_tiles()
 
         # train
+        pipeline.prepare_data()
         pipeline.train()
 
         # visualization
