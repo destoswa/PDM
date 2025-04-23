@@ -655,12 +655,14 @@ class Pipeline():
         )
 
         # run training script
+        model_checkpoint = self.model_checkpoint_src if self.model_checkpoint_src != "None" else "/home/pdm/models/SegmentAnyTree/model_file"
         self.run_subprocess(
             src_script="/home/pdm/models/SegmentAnyTree/",
             script_name="./run_pipeline.sh",
             params= [self.training.num_trainings_per_loop, 
                      self.training.batch_size, 
                      self.training.sample_per_epoch,
+                     model_checkpoint,
                      self.training_metrics_src,
                      self.current_loop,],
             )

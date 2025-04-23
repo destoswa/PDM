@@ -9,6 +9,7 @@ import logging
 
 @hydra.main(config_path="conf", config_name="config")
 def main(cfg):
+    # print(cfg.items())
     numba_logger = logging.getLogger('numba')
     numba_logger.setLevel(logging.WARNING)
     OmegaConf.set_struct(cfg, False)  # This allows getattr and hasattr methods to function correctly

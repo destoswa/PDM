@@ -53,6 +53,9 @@ def main(cfg):
     TEST_FRAC = cfg.pipeline.test_frac
     VAL_FRAC = cfg.pipeline.val_frac
 
+    # processes
+    SAVE_PSEUDO_LABELS_PER_LOOP = cfg.pipeline.save_pseudo_labels_per_loop
+
 
     # assertions
     assert TRAIN_FRAC + TEST_FRAC + VAL_FRAC == 1.0
@@ -151,7 +154,14 @@ def main(cfg):
         pipeline.prepare_data()
         pipeline.train()
 
-        # visualization
+        # saving results
+        if SAVE_PSEUDO_LABELS_PER_LOOP:
+            os.makedirs(os.path.join(pipeline.result_dir, f'{loop}/pseudo_labels'))
+            for file in [f for f in os.listdir(pipeline.result_dir) if f.endswith(FILE_FORMAT)]:
+                shutil.copyfile(os.path.join(pipeline.result_dir, file), 
+                                os.path.join(pipeline.result_dir, f'loops/{loop}/pseudo_labels')
+                                )
+
         delta_time_loop = time() - time_start_loop
         hours = int(delta_time_loop // 3600)
         min = int((delta_time_loop - 3600 * hours) // 60)
@@ -162,8 +172,7 @@ def main(cfg):
     pipeline.inference_metrics.to_csv(
         os.path.join(
             ROOT_SRC, 
-            pipeline.training.result_training_dir, 
-            pipeline.training.result_src_name, 
+            pipeline.result_dir,
             "inference_metrics.csv"),
         sep=';',
         index=False,

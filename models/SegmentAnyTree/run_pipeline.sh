@@ -4,8 +4,9 @@
 epochs=$1
 batch_size=$2
 sample_per_epoch=$3
-train_metrics_src=$4
-current_loop=$5
+checkpoint_dir=$4
+train_metrics_src=$5
+current_loop=$6
 
 python3 train.py task=panoptic \
     data=panoptic/treeins_rad8 \
@@ -16,6 +17,7 @@ python3 train.py task=panoptic \
     epochs=$(($epochs)) \
     batch_size=$(($batch_size)) \
     data.sample_per_epoch=$(($sample_per_epoch)) \
+    checkpoint_dir=$checkpoint_dir \
     +train_metrics_src=$train_metrics_src \
     +current_loop=$current_loop
 
