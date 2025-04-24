@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     python3.8 \
     python3.8-dev \
+    python3.9 \
+    python3.9-dev \
     python3-pip \
     pdal \
     ssh \
@@ -45,21 +47,22 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
 ENV PATH="/opt/conda/bin:${PATH}"
 ENV CONDA_AUTO_UPDATE_CONDA=false
 
-# Create and activate a conda environment for PDAL
-RUN conda create -y -n pdal_env -c conda-forge python=3.8 pdal python-pdal && conda clean --all -y
+# Create and activate a conda environment for the project and one for PDAL
+RUN conda create -y -n pdm_env -c conda-forge python=3.8 pdal python-pdal && conda clean --all -y
+RUN conda create -y -n pdal_env -c conda-forge python=3.9 pdal python-pdal && conda clean --all -y
 
 # Ensure Conda activates automatically for interactive shells
-RUN echo "source activate pdal_env" >> ~/.bashrc
+RUN echo "source activate pdm_env" >> ~/.bashrc
 
 # Set Conda environment as default
-ENV CONDA_DEFAULT_ENV=pdal_env
-ENV CONDA_PREFIX=/opt/conda/envs/pdal_env
+ENV CONDA_DEFAULT_ENV=pdm_env
+ENV CONDA_PREFIX=/opt/conda/envs/pdm_env
 ENV PATH="${CONDA_PREFIX}/bin:${PATH}"
 
 # Install dependencies inside the Conda environment
 # RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade pip \
 #     && conda run -n pdal_env python -m pip install autopep8 doc8 ipython pandas tqdm
-RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade \
+RUN conda run -n pdm_env python -m pip install --no-cache-dir --upgrade \
     autopep8==1.5.7 \
     doc8==0.8.1 \
     docutils==0.17.1 \
@@ -84,13 +87,13 @@ ENV TORCH_CUDA_ARCH_LIST_VER="6.0;7.0;7.5;8.0;8.6"
 #     torch==1.9.0+${CU_VERSION} torchvision==0.10.0+${CU_VERSION} torchaudio==0.9.0 \
 #     -f https://download.pytorch.org/whl/torch_stable.html
 
-RUN conda run -n pdal_env python -m pip install --no-cache-dir \
+RUN conda run -n pdm_env python -m pip install --no-cache-dir \
     torch==1.9.0+${CU_VERSION} \
     torchvision==0.10.0+${CU_VERSION} \
     torchaudio==0.9.0 \
     -f https://download.pytorch.org/whl/torch_stable.html
 
-RUN conda run -n pdal_env python -m pip install --no-cache-dir \
+RUN conda run -n pdm_env python -m pip install --no-cache-dir \
     torch-scatter==2.0.8 \
     torch-sparse==0.6.12 \
     torch-cluster==1.5.9 \
@@ -98,15 +101,15 @@ RUN conda run -n pdal_env python -m pip install --no-cache-dir \
     torch-geometric==1.7.2 \
     -f https://data.pyg.org/whl/torch-1.9.0+${CU_VERSION}.html
 
-RUN TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST_VER} conda run -n pdal_env python -m pip install --no-cache-dir \
+RUN TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST_VER} conda run -n pdm_env python -m pip install --no-cache-dir \
     git+https://github.com/NVIDIA/MinkowskiEngine.git \
     --install-option="--blas=openblas" --install-option="--force_cuda"
 
-RUN TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST_VER} FORCE_CUDA=1 conda run -n pdal_env python -m pip install --no-cache-dir \
+RUN TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST_VER} FORCE_CUDA=1 conda run -n pdm_env python -m pip install --no-cache-dir \
     git+https://github.com/mit-han-lab/torchsparse.git@v1.4.0
 
 # Install torch-points3d requirements and fixed dependencies
-RUN TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST_VER} FORCE_CUDA=1 conda run -n pdal_env python -m pip install --no-cache-dir \
+RUN TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST_VER} FORCE_CUDA=1 conda run -n pdm_env python -m pip install --no-cache-dir \
     torch-points-kernels==0.7.0 \
     absl-py==0.14.0 \
     addict==2.4.0 \
@@ -250,9 +253,9 @@ RUN TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST_VER} FORCE_CUDA=1 conda run -n p
 RUN apt update && apt install -y curl
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 RUN export PATH=$PATH:~/.cargo/bin/
-RUN conda run -n pdal_env python -m pip install laspy[lazrs]==2.0.3
+RUN conda run -n pdm_env python -m pip install laspy[lazrs]==2.0.3
 
-RUN conda run -n pdal_env python -m pip install cython==0.29.37
+RUN conda run -n pdm_env python -m pip install cython==0.29.37
 RUN wget https://github.com/scikit-learn-contrib/hdbscan/archive/refs/tags/0.8.29.zip && \
     unzip 0.8.29.zip && \
     rm 0.8.29.zip && \
@@ -260,7 +263,7 @@ RUN wget https://github.com/scikit-learn-contrib/hdbscan/archive/refs/tags/0.8.2
     python3.8 -m pip install -r requirements.txt && \
     python3.8 setup.py install
     
-RUN conda run -n pdal_env python -m pip install --no-cache-dir \
+RUN conda run -n pdm_env python -m pip install --no-cache-dir \
     numba==0.57.1 \
     numpy==1.24.4 \
     jaklas \
