@@ -107,22 +107,6 @@ def main(cfg):
         #     if tile in pipeline.tiles_to_process:
         #         pipeline.tiles_to_process.remove(tile)
 
-
-
-
-        # lst_files = [f for f in os.listdir(cfg.dataset.data_src) if f.endswith(FILE_FORMAT) and f not in pipeline.problematic_tiles]
-        # if pipeline.classification.processes.do_remove_empty_tiles and len(pipeline.empty_tiles) > 0:
-        #     lst_files = [f for f in lst_files if f not in pipeline.empty_tiles]
-
-        # # create csv for files referencing
-        # num_train = int(len(lst_files) * (TRAIN_FRAC + VAL_FRAC))
-        # train_test_split = random.sample(range(len(lst_files)), num_train)
-        # lst_files = [f for f in os.listdir(cfg.dataset.data_src) if f.endswith(FILE_FORMAT) and f not in pipeline.problematic_tiles]
-        # if pipeline.classification.processes.do_remove_empty_tiles and len(pipeline.empty_tiles) > 0:
-        #     lst_files = [f for f in lst_files if f not in pipeline.empty_tiles]
-
-
-
         # create csv for files referencing
         num_train = int(len(pipeline.tiles_to_process) * (TRAIN_FRAC + VAL_FRAC))
         train_test_split = random.sample(range(len(pipeline.tiles_to_process)), num_train)
@@ -140,6 +124,7 @@ def main(cfg):
         df_split_data.to_csv(os.path.join(pipeline.result_pseudo_labels_dir, 'data_split_metadata.csv'), sep=',', index=False)
 
         print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
+        
         # classify
         pipeline.classify(verbose=False)
         print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)

@@ -5,6 +5,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 import hydra
 import time
 import logging
+import pickle
 
 from tqdm.auto import tqdm
 import wandb
@@ -232,6 +233,21 @@ class Trainer:
         iter_data_time = time.time()
         with Ctq(train_loader) as tq_train_loader:
             for i, data in enumerate(tq_train_loader):
+                # print("CEENNTTTTEEER:")
+                # print(center)
+                # print("DAAAATTTAAAAAAAAA:")
+                # print(data_dict.keys())
+                # # print(data_dict['coords'].numpy())
+                # for key, val in data_dict.items():
+                #     print(key, " : ")
+                #     print("\t", val)
+                data_dict = data.to_dict()
+                center = data_dict['center']
+                print("CEENNTTTTEEER:")
+                print(center)
+                os.makedirs("/home/pdm/data/dataset_tiles_100m/training_samples", exist_ok=True)
+                with open(f"/home/pdm/data/dataset_tiles_100m/training_samples/epoch_{epoch}_samples_{i}.pickle", 'wb') as file:
+                    pickle.dump(center, file)
             # for i, data in tqdm(enumerate(train_loader)):
                 t_data = time.time() - iter_data_time
                 iter_start_time = time.time()

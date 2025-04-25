@@ -47,9 +47,12 @@ def las_to_ply(las_file_path, ply_file_path, remove_ground=False, remove_lowveg=
     len = las.X.size
 
     #remove points from certain classification labels
+    # print("{} percent of the points are ground points.".format((np.count_nonzero(las.classification==2)/len)))
+    # print("{} percent of the points are low vegetation points.".format((np.count_nonzero(las.classification == 1) / len)))
+    # print("{} percent of the points are outpoints.".format((np.count_nonzero(las.classification == 3) / len)))
     print("{} percent of the points are ground points.".format((np.count_nonzero(las.classification==2)/len)))
-    print("{} percent of the points are low vegetation points.".format((np.count_nonzero(las.classification == 1) / len)))
-    print("{} percent of the points are outpoints.".format((np.count_nonzero(las.classification == 3) / len)))
+    print("{} percent of the points are low vegetation points.".format((np.count_nonzero(las.classification == 4) / len)))
+    print("{} percent of the points are outpoints.".format((np.count_nonzero(las.classification == 1) / len)))
 
     foldername_addition = ""
     points_to_keep = np.full(len, True)
