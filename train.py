@@ -9,6 +9,8 @@ import laspy
 from tqdm import tqdm
 from scipy.spatial import cKDTree
 from time import time
+# import warnings
+# warnings.filterwarnings("ignore")
 
 from src.format_conversions import convert_all_in_folder
 from src.pipeline import Pipeline
@@ -99,13 +101,21 @@ def main(cfg):
         }
         pipeline.inference_metrics = pd.concat([pipeline.inference_metrics, pd.DataFrame(loop_tiles_state)], axis=0)
 
+        # preprocess
+        # print("preprocessing...")
+        # pipeline.preprocess()
+        # print("done")
+
         # segment
-        print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
+        # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
         pipeline.segment(verbose=False)
-        # pipeline.problematic_tiles = ["color_grp_full_tile_4.laz", "color_grp_full_tile_7.laz", "color_grp_full_tile_12.laz"]
+
+
+        # pipeline.problematic_tiles = ["color_grp_full_tile_4.laz", "color_grp_full_tile_7.laz", "color_grp_full_tile_12.laz", "color_grp_full_tile_10.laz"]
         # for tile in pipeline.problematic_tiles:
         #     if tile in pipeline.tiles_to_process:
         #         pipeline.tiles_to_process.remove(tile)
+
 
         # create csv for files referencing
         num_train = int(len(pipeline.tiles_to_process) * (TRAIN_FRAC + VAL_FRAC))
@@ -123,11 +133,11 @@ def main(cfg):
         df_split_data = pd.DataFrame(columns=['path', 'folder', 'split'], data=lst_split_data)
         df_split_data.to_csv(os.path.join(pipeline.result_pseudo_labels_dir, 'data_split_metadata.csv'), sep=',', index=False)
 
-        print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
+        # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
         
         # classify
         pipeline.classify(verbose=False)
-        print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
+        # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
 
         # create pseudo-labels
         pipeline.create_pseudo_labels(verbose=False)

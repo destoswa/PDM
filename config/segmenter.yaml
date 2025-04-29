@@ -1,5 +1,5 @@
 segmenter:
-  root_model_src: /home/pdm/models/SegmentAnyTree/
+  root_model_src: /home/pdm/models/SegmentAnyTree
   inference:
     model_checkpoint_src: None
     config_eval_src: /home/pdm/models/SegmentAnyTree/conf/eval.yaml
@@ -12,6 +12,6 @@ segmenter:
     result_src_name_suffixe: test
     result_src_full_name: None
     batch_size: 2
-    num_trainings_per_loop: 2
-    sample_per_epoch: 10
+    num_epochs_per_loop: 2
+    sample_per_epoch: 100
 

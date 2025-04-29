@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-
 DOCKER_IN_FOLDER="$1"
 DOCKER_OUT_FOLDER="$2"
 
@@ -141,4 +140,4 @@ done
 # Run the output script
 run_oracle_wrapper_output
 
-echo "Processing complete."
+# echo "Processing complete."

@@ -1,3 +1,3 @@
 hydra:
   run:
-    dir: ../../results/trainings/20250425_165303_test/1
+    dir: ../../results/trainings/20250428_160151_test/0

@@ -144,6 +144,12 @@ class Trainer:
             self._cfg.training.num_workers,
             self.precompute_multi_scale,
         )
+        if self.is_training:
+            print("============")
+            print("TRAINING DATASET")
+            print(self._dataset.train_dataset.__dict__)
+            print("============")
+
         # log.info(self._dataset)
 
         # Verify attributes in dataset
@@ -218,9 +224,9 @@ class Trainer:
                 Wandb.add_file(self._checkpoint.checkpoint_path)
             if self._tracker._stage == "train":
                 log.info("Learning rate = %f" % self._model.learning_rate)
-        print("="*10)
-        print("METRICS: ", metrics)
-        print("="*10)
+        # print("="*10)
+        # print("METRICS: ", metrics)
+        # print("="*10)
         return metrics
 
     def _train_epoch(self, epoch: int):
@@ -243,8 +249,8 @@ class Trainer:
                 #     print("\t", val)
                 data_dict = data.to_dict()
                 center = data_dict['center']
-                print("CEENNTTTTEEER:")
-                print(center)
+                # print("CEENNTTTTEEER:")
+                # print(center)
                 os.makedirs("/home/pdm/data/dataset_tiles_100m/training_samples", exist_ok=True)
                 with open(f"/home/pdm/data/dataset_tiles_100m/training_samples/epoch_{epoch}_samples_{i}.pickle", 'wb') as file:
                     pickle.dump(center, file)
@@ -289,7 +295,7 @@ class Trainer:
         if self.enable_dropout:
             self._model.enable_dropout_in_eval()
 
-        print("LOADERS:", loaders)
+        # print("LOADERS:", loaders)
         for loader in loaders:
             stage_name = loader.dataset.name
             self._tracker.reset(stage_name)

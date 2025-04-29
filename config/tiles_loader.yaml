@@ -1,0 +1,13 @@
+tiles_loader:
+  original_file_path: data/full_dataset/color_grp_full.laz
+  tiles_destination: data/full_dataset/test/dataset_full_${tiles_loader.tiling.tile_size}m
+  preprocess:
+    do_flatten: True
+    do_remove_duplicates: True
+  tiling:
+    tile_size: 100
+    pack_size: 10
+  trimming:
+    results_dest: data/full_dataset/test
+    method: drop  # choose between {'drop', 'tree', 'single'}
+    do_remove_empties: True # use of the classifier to remove the tiles that have no predictions classified as tree

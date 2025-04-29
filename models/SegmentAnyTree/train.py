@@ -5,6 +5,8 @@ from hydra.core.global_hydra import GlobalHydra
 from omegaconf import OmegaConf
 from torch_points3d.trainer import Trainer
 import logging
+import warnings
+warnings.filterwarnings("ignore")
 
 
 @hydra.main(config_path="conf", config_name="config")

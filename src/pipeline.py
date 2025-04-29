@@ -120,7 +120,10 @@ class Pipeline():
 
         # construct command and run subprocess
         script_str = script_name
+        # script_str = ['bash', script_name]
         if params:
+            # for x in params:
+                # script_str.append(str(x))
             script_str += ' ' + ' '.join([str(x) for x in params])
         process = subprocess.Popen(
             script_str,
@@ -337,6 +340,20 @@ class Pipeline():
 
         return laz2  # Now sorted to match laz1
 
+    def preprocess(self, verbose=True):
+        # remove duplicates
+        for tile in self.tiles_to_process:
+            tile_path = os.path.join(self.result_pseudo_labels_dir, tile)
+            tile = laspy.read(tile_path)
+            if verbose:
+                print("size of original file: ", len(tile))
+
+            Pipeline.remove_duplicates(tile)
+
+            if verbose:
+                print("size after duplicate removal: ", len(tile))
+
+
     def segment(self, verbose=False):
         print("Starting inference:")
         if not os.path.exists(self.preds_src):
@@ -373,19 +390,20 @@ class Pipeline():
 
 
         # creates pack of samples to infer on
-        list_pack_of_tiles = [self.tiles_to_process[x:min(y,len(self.tiles_to_process))] for x, y in zip(
-            range(0, len(self.tiles_to_process) - self.inference.num_tiles_per_inference, self.inference.num_tiles_per_inference),
-            range(self.inference.num_tiles_per_inference, len(self.tiles_to_process), self.inference.num_tiles_per_inference),
-            )]
-        if list_pack_of_tiles[-1][-1] != self.tiles_to_process[-1]:
-            list_pack_of_tiles.append(self.tiles_to_process[(len(list_pack_of_tiles)*self.inference.num_tiles_per_inference)::])
+        if self.inference.num_tiles_per_inference > 1:
+            list_pack_of_tiles = [self.tiles_to_process[x:min(y,len(self.tiles_to_process))] for x, y in zip(
+                range(0, len(self.tiles_to_process) - self.inference.num_tiles_per_inference, self.inference.num_tiles_per_inference),
+                range(self.inference.num_tiles_per_inference, len(self.tiles_to_process), self.inference.num_tiles_per_inference),
+                )]
+            if list_pack_of_tiles[-1][-1] != self.tiles_to_process[-1]:
+                list_pack_of_tiles.append(self.tiles_to_process[(len(list_pack_of_tiles)*self.inference.num_tiles_per_inference)::])
         
         # loops on samples:
         for _, file in tqdm(enumerate(self.tiles_to_process), total=len(self.tiles_to_process), desc="Processing"):
             if verbose:
                 print("===\tProcessing file: ", file, "\t===")
             # original_file_src = os.path.join(os.path.join(self.root_src, self.data_src, file))
-            original_file_src = os.path.join(os.path.join(self.result_pseudo_labels_dir, self.data_src, file))
+            original_file_src = os.path.join(self.result_pseudo_labels_dir, self.data_src, file)
             temp_file_src = os.path.join(os.path.join(temp_seg_src, file))
             shutil.copyfile(
                 original_file_src,
@@ -498,6 +516,8 @@ class Pipeline():
         print("Creating pseudo labels:")
         list_folders = [x for x in os.listdir(self.preds_src) if os.path.abspath(os.path.join(self.preds_src, x)) and x.endswith('instance')]
         for _, child in tqdm(enumerate(list_folders), total=len(list_folders), desc='Processing'):
+            if verbose:
+                print("Processing sample : ", child)
             # load original file
             # original_file_src = os.path.join(self.data_src, child.split('_out')[0] + '.' + self.file_format)
             original_file_src = os.path.join(self.result_pseudo_labels_dir, child.split('_out')[0] + '.' + self.file_format)
@@ -516,6 +536,7 @@ class Pipeline():
             df_results = pd.read_csv(os.path.join(results_src, 'results.csv'), sep=';')
             
             # match the original with the pred
+            Pipeline.remove_duplicates(original_file)
             Pipeline.remove_duplicates(new_file)
             Pipeline.remove_duplicates(pred_file)
             Pipeline.match_pointclouds(new_file, pred_file)
@@ -659,7 +680,7 @@ class Pipeline():
         self.run_subprocess(
             src_script="/home/pdm/models/SegmentAnyTree/",
             script_name="./run_pipeline.sh",
-            params= [self.training.num_trainings_per_loop, 
+            params= [self.training.num_epochs_per_loop, 
                      self.training.batch_size, 
                      self.training.sample_per_epoch,
                      model_checkpoint,

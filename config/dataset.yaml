@@ -1,4 +1,4 @@
 dataset:
   project_root_src: /home/pdm/
-  data_src: data/dataset_tiles_100m/originals
+  data_src: data/dataset_tiles_100m/tiles_light
   file_format: laz
