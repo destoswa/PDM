@@ -220,6 +220,9 @@ class TreeinsOriginalFused(InMemoryDataset):
                 path = self.processed_paths[3]
             else:
                 raise ValueError((f"Split {split} found, but expected either " "train, val, trainval or test"))
+            print("===========================")
+            print("PATH TO DATA: ", path)
+            print("===========================")
             self._load_data(path)
 
             if split == "test":
@@ -355,7 +358,7 @@ class TreeinsOriginalFused(InMemoryDataset):
             #     print(area_num)
             #     print("data:")  #Data(pos=[30033430, 3], validation_set=False, y=[30033430])
             #     print(data)
-            #     data_list[area_num].append(data)
+                data_list[area_num].append(data)
             # print("data_list")
             # print(data_list)
             raw_areas = cT.PointCloudFusion()(data_list)

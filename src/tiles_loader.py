@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 import subprocess
 import numpy as np
@@ -11,13 +12,28 @@ import threading
 import pdal
 import json
 import warnings
+import zipfile
+
+if __name__ == "__main__":
+    sys.path.append(os.getcwd())
+from src.splitting import split_instance
+from src.format_conversions import convert_all_in_folder
 
 
 class TilesLoader():
     def __init__(self, cfg):
         self.tilesloader_conf = cfg.tiles_loader
         self.segmenter_conf = cfg.segmenter
+        self.classifier_conf = cfg.classifier
+        self.root_src = self.tilesloader_conf.root_src
         self.data_src = self.tilesloader_conf.original_file_path
+        self.trimming_method = self.tilesloader_conf.trimming.method
+        self.trimming_tree_list = self.tilesloader_conf.trimming.tree_list
+        self.not_yet_trim = True
+        self.pack_size = self.tilesloader_conf.tiling.pack_size
+        self.results_dest = self.tilesloader_conf.results_destination
+        self.segmentation_results_dir = os.path.join(self.root_src, self.results_dest, "segmented")
+        self.classification_results_dir = os.path.join(self.root_src, self.results_dest, "classified")
         self.data_dest = self.tilesloader_conf.tiles_destination
         self.list_tiles = []
         self.list_pack_of_tiles = []
@@ -119,6 +135,22 @@ class TilesLoader():
         pipeline.execute()
 
     #   _static methods used by the trimming
+    @staticmethod
+    def unzip_laz_files(zip_path, extract_to=".", delete_zip=True):
+        """Extract all .laz files from a zip archive to a target directory root.
+
+        zip_path (str): Path to the .zip archive.
+        extract_to (str): Directory where .laz files will be extracted. Defaults to current directory.
+        """
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            laz_files = [f for f in zip_ref.namelist() if f.lower().endswith('.laz') and not f.endswith('/')]
+            for file in laz_files:
+                # Extract and flatten the path to root
+                filename = os.path.basename(file)
+                with zip_ref.open(file) as source, open(os.path.join(extract_to, filename), 'wb') as target:
+                    target.write(source.read())
+        if delete_zip:
+            os.remove(zip_path)
 
     #   _static methods used by the preprocess
 
@@ -183,7 +215,7 @@ class TilesLoader():
         pipeline_thread.join()
 
         # Load tiles path
-        #  _verify that all the files of the destination have the same extension
+        #   _verify that all the files of the destination have the same extension
         if len(set([x.split('.')[-1] for x in os.listdir(self.data_dest)])) != 1:
             warnings.warn('It seems like the resulting folder contains files with different extensions!')
         #   _load
@@ -192,6 +224,19 @@ class TilesLoader():
         print("Tiling complete.")
 
     def trimming(self, verbose=True):
+        if self.trimming_method == "tree":
+            if self.not_yet_trim == True:
+                self.pack_size = self.trimming_tree_list[0]
+                self.trimming_tree_list.pop(0)
+                self.not_yet_trim = False
+            elif self.trimming_tree_list != [] and self.problematic_tiles != []:
+                self.pack_size = self.trimming_tree_list[0]
+                self.trimming_tree_list.pop(0)
+                self.list_tiles = self.problematic_tiles
+                self.problematic_tiles = []
+            else:
+                return
+
         # security
         if len(self.list_tiles) == 0:
             print("No tiles are loaded in the system!")
@@ -213,36 +258,30 @@ class TilesLoader():
                 quit()
 
         # creates pack of samples to infer on
-        if self.tilesloader_conf.tiling.pack_size > 1:
+        if self.pack_size > 1:
             self.list_pack_of_tiles = [self.list_tiles[x:min(y,len(self.list_tiles))] for x, y in zip(
-                range(0, len(self.list_tiles) - self.tilesloader_conf.tiling.pack_size, self.tilesloader_conf.tiling.pack_size),
-                range(self.tilesloader_conf.tiling.pack_size, len(self.list_tiles), self.tilesloader_conf.tiling.pack_size),
+                range(0, len(self.list_tiles) - self.pack_size, self.pack_size),
+                range(self.pack_size, len(self.list_tiles), self.pack_size),
                 )]
             if self.list_pack_of_tiles[-1][-1] != self.list_tiles[-1]:
-                self.list_pack_of_tiles.append(self.list_tiles[(len(self.list_pack_of_tiles)*self.tilesloader_conf.tiling.pack_size)::])
+                self.list_pack_of_tiles.append(self.list_tiles[(len(self.list_pack_of_tiles)*self.pack_size)::])
         else:
             self.list_pack_of_tiles = [[x] for x in self.list_tiles]
 
-        # # select checkpoint
-        # if self.model_checkpoint_src == "None":
-        #     TilesLoader.change_var_val_yaml(
-        #         src_yaml=self.inference.config_eval_src,
-        #         var="checkpoint_dir",
-        #         val="/home/pdm/models/SegmentAnyTree/model_file",
-        #     )
-        # else:
-        #     TilesLoader.change_var_val_yaml(
-        #         src_yaml=self.inference.config_eval_src,
-        #         var="checkpoint_dir",
-        #         val=os.path.join(self.cfg.pipeline.root_src, self.model_checkpoint_src),
-        #     )
+        # select checkpoint
+        TilesLoader.change_var_val_yaml(
+                src_yaml=self.segmenter_conf.inference.config_eval_src,
+                var="checkpoint_dir",
+                val="/home/pdm/models/SegmentAnyTree/model_file",
+            )
 
         # create temp folder
-        temp_seg_src = os.path.join(self.tilesloader_conf.trimming.results_dest, 'temp_seg')
+        temp_seg_src = os.path.join(self.results_dest, 'temp_seg')
         if os.path.exists(temp_seg_src):
             shutil.rmtree(temp_seg_src)
         os.makedirs(temp_seg_src)
 
+        # pack_passed = [0,1,0,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,1,0,1,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,1,0,1,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,1,0,1,0,1,0]
         # loops on samples:
         for _, pack in tqdm(enumerate(self.list_pack_of_tiles), total=len(self.list_pack_of_tiles), desc="Processing"):
             if verbose:
@@ -254,25 +293,29 @@ class TilesLoader():
             for file in pack:
                 original_file_src = os.path.join(self.data_dest, file)
                 temp_file_src = os.path.join(os.path.join(temp_seg_src, file))
-                print(temp_file_src)
+                # print(temp_file_src)
                 shutil.copyfile(original_file_src, temp_file_src)
             # quit()
 
             # segment on it
-            # segmentation_results_dir = os.path.join(self.tilesloader_conf.trimming.results_dest, "segmented")
-            # return_code = self.run_subprocess(
-            #     src_script=self.segmenter_conf.root_model_src,
-            #     script_name="./run_inference.sh",
-            #     params= [temp_seg_src, segmentation_results_dir, True],
-            #     verbose=verbose
-            #     )
-            segmentation_results_dir = os.path.join(self.tilesloader_conf.trimming.results_dest, "segmented")
+            segmentation_results_dir = os.path.join(self.results_dest, "segmented")
+            os.makedirs(self.segmentation_results_dir, exist_ok=True)
             return_code = self.run_subprocess(
                 src_script=self.segmenter_conf.root_model_src,
-                script_name="./run_oracle_pipeline.sh",
-                params= [temp_seg_src, segmentation_results_dir],
+                script_name="./run_inference.sh",
+                params= [temp_seg_src, self.segmentation_results_dir, True],
                 verbose=verbose
                 )
+            
+            # return_code = self.run_subprocess(
+            #     src_script=self.segmenter_conf.root_model_src,
+            #     script_name="./run_oracle_pipeline.sh",
+            #     params= [temp_seg_src, self.segmentation_results_dir],
+            #     verbose=verbose
+            #     )
+            
+            # test
+            # return_code = pack_passed[id_pack]
             
             # catch errors
             if return_code != 0:
@@ -286,19 +329,100 @@ class TilesLoader():
                 if verbose:
                     print("Unzipping results...")
                 self.unzip_laz_files(
-                    zip_path=os.path.join(segmentation_results_dir, "results.zip"),
-                    extract_to=segmentation_results_dir,
+                    zip_path=os.path.join(self.segmentation_results_dir, "results.zip"),
+                    extract_to=self.segmentation_results_dir,
                     delete_zip=True
                     )
+                # for file in pack:
+                #     shutil.copyfile(
+                #         os.path.join(self.data_dest, file),
+                #         os.path.join(segmentation_results_dir, file)
+                #     )
                 
             # removing temp file
             for file in os.listdir(temp_seg_src):
                 os.remove(os.path.join(temp_seg_src, file))
 
+        # removing temp folder
+        shutil.rmtree(temp_seg_src)
+
+        # printing stuff for test
+        print("State of the tree_list: ", self.trimming_tree_list)
+        print("Files in the list: ", len(self.list_tiles))
+        print("Failed tiles: ", len(self.problematic_tiles))
+        print("Files in folder: ", len([x for x in os.listdir(os.path.join(segmentation_results_dir))]))
+
+        if self.trimming_method == "tree":
+            self.trimming()
+
     def preprocess(self):
         pass
 
+    def classify(self, verbose=True):
+        # create folder for classification results
+        os.makedirs(self.classification_results_dir, exist_ok=True)
 
+        # prepare results dict
+        results_dist = {
+            'tile_name': [],
+            'garbage': [],
+            'multi': [],
+            'single': [],
+        }
+        list_files = [x for x in os.listdir(self.segmentation_results_dir) if x.endswith('.laz')]
+        for _, file in tqdm(enumerate(list_files), total=len(list_files), desc="Classifying"):
+            # load tile
+
+            # create corresponding folder
+
+            #
+            tile_full_path = os.path.join(self.segmentation_results_dir, file)
+            # split_instance(tile_full_path, path_out=self.classification_results_dir, verbose=verbose)
+
+            # convert instances to pcd
+            dir_target = os.path.join(self.classification_results_dir, os.path.basename(tile_full_path).split('.')[0] + "_split_instance")
+            convert_all_in_folder(
+                src_folder_in=dir_target, 
+                src_folder_out=os.path.join(dir_target, 'data'), 
+                in_type="laz", 
+                out_type='pcd',
+                verbose=verbose
+                )
+            
+            # makes predictions
+            input_folder = dir_target
+            output_folder = os.path.join(dir_target, 'data')
+            code_return = self.run_subprocess(
+                src_script=self.classifier_conf.root_model_src,
+                script_name="./run_inference.sh",
+                params= [input_folder, output_folder],
+                verbose=verbose
+                )
+            if code_return != 0:
+                print(f"WARNING! Subprocess for classification return code {code_return}!!")
+
+            # remove data
+            shutil.rmtree(os.path.join(dir_target, 'data'))
+
+            # store distribution results
+            df_file_results = pd.read_csv(os.path.join(dir_target, 'results/results.csv'), sep=';')
+            counts = df_file_results.groupby('class').count()
+            results_dist['tile_name'].append(file)
+            for cat_num, cat_str in zip([0,1,2], ['garbage', 'multi', 'single']):
+                if cat_num in counts.index:
+                    results_dist[cat_str].append(counts.loc[cat_num].values[0])
+                else: 
+                    results_dist[cat_str].append(0)
+
+        # save count results
+        pd.DataFrame(results_dist).to_csv(
+            os.path.join(self.results_dest, 'distribution_per_tile.csv'),
+            sep=';',
+            index=False,
+        )
+            # for file in os.listdir(output_folder):
+            #     if file.endswith('.pcd'):
+            #         os.remove(os.path.join(output_folder, file))
 
     # ===============================================
     # ======== for the future if enough time ========
@@ -314,9 +438,16 @@ class TilesLoader():
         pass
 
 if __name__ == "__main__":
+    
+    time_start = time.time()
     cfg_tilesloader = OmegaConf.load("config/tiles_loader.yaml")
     cfg_segmenter = OmegaConf.load("config/segmenter.yaml")
-    cfg = OmegaConf.merge(cfg_tilesloader, cfg_segmenter)
+    cfg_classifier = OmegaConf.load("config/classifier.yaml")
+    cfg = OmegaConf.merge(cfg_tilesloader, cfg_segmenter, cfg_classifier)
     tiles_loader = TilesLoader(cfg)
     # tiles_loader.tiling()
     tiles_loader.trimming(verbose=True)
+    # tiles_loader.classify(verbose=False)
+    
+    delta_time = time.time() - time_start
+    print(f"Process done in {delta_time} seconds")

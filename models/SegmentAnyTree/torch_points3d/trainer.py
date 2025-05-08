@@ -100,13 +100,16 @@ class Trainer:
             run_config=self._cfg,
             resume=resume,
         )
-
+        print("================================= 1 ========================================")
+        print("Is training: ", self.is_training)
         # Create model and datasets
         if not self._checkpoint.is_empty:
+            print("================================= 1.1 ========================================")
             # print("DATA CONFIG 1:\n", self._checkpoint.data_config.dataroot)
             # print("DATA CONFIG 1:\n", self._cfg.data.dataroot)
 
             # self._checkpoint.data_config.dataroot = self._cfg.data.dataroot
+
             if self.is_training:
                 self._dataset: BaseDataset = instantiate_dataset(self._cfg.data)
             else:
@@ -114,6 +117,7 @@ class Trainer:
             self._model: BaseModel = self._checkpoint.create_model(
                 self._dataset, weight_name=self._cfg.training.weight_name
             )
+            print("================================= 1.2 ========================================")
             
             #train need
             if self.is_training:
@@ -129,6 +133,7 @@ class Trainer:
             #            self._dataset.used_properties
             #        )
             #    )
+        print("================================= 2 ========================================")
         self._checkpoint.dataset_properties = self._dataset.used_properties
 
         # log.info(self._model)
@@ -136,6 +141,7 @@ class Trainer:
         self._model.log_optimizers()
         log.info("Model size = %i", sum(param.numel() for param in self._model.parameters() if param.requires_grad))
 
+        print("================================= 3 ========================================")
         # Set dataloaders
         self._dataset.create_dataloaders(
             self._model,
@@ -144,6 +150,7 @@ class Trainer:
             self._cfg.training.num_workers,
             self.precompute_multi_scale,
         )
+        print("================================= 4 ========================================")
         if self.is_training:
             print("============")
             print("TRAINING DATASET")
@@ -247,13 +254,13 @@ class Trainer:
                 # for key, val in data_dict.items():
                 #     print(key, " : ")
                 #     print("\t", val)
-                data_dict = data.to_dict()
+                """data_dict = data.to_dict()
                 center = data_dict['center']
                 # print("CEENNTTTTEEER:")
                 # print(center)
                 os.makedirs("/home/pdm/data/dataset_tiles_100m/training_samples", exist_ok=True)
                 with open(f"/home/pdm/data/dataset_tiles_100m/training_samples/epoch_{epoch}_samples_{i}.pickle", 'wb') as file:
-                    pickle.dump(center, file)
+                    pickle.dump(center, file)"""
             # for i, data in tqdm(enumerate(train_loader)):
                 t_data = time.time() - iter_data_time
                 iter_start_time = time.time()

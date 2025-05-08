@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 import zipfile
 import numpy as np
@@ -13,17 +14,21 @@ from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from functools import partial
 from omegaconf import OmegaConf
+from scipy.spatial import cKDTree
+if __name__ == "__main__":
+    sys.path.append(os.getcwd())
 from src.format_conversions import convert_all_in_folder
 from src.pseudo_labels_creation import update_attribute_where_cluster_match
-from scipy.spatial import cKDTree
 from src.metrics import compute_classification_results, compute_panoptic_quality, compute_mean_iou
+from src.visualization import show_global_metrics, show_inference_counts, show_inference_metrics
+from src.splitting import split_instance
 # from models.KDE_classifier.inference import inference
 
 
 class Pipeline():
     def __init__(self, cfg):
         self.cfg = cfg
-        self.root_src = cfg.dataset.project_root_src
+        self.root_src = cfg.pipeline.root_src
         self.classifier_root_src = cfg.classifier.root_model_src
         self.segmenter_root_src = cfg.segmenter.root_model_src
 
@@ -34,15 +39,16 @@ class Pipeline():
         self.tiles_to_process = self.tiles_all.copy()
 
         # config regarding pipeline
-        self.num_loops = cfg.pipeline.loop_iteration
+        self.num_loops = cfg.pipeline.num_loops
         self.current_loop = 0
-        self.results_src = ""
+        self.results_root_src = cfg.pipeline.results_root_src
         self.upgrade_ground = cfg.pipeline.processes.upgrade_ground
         self.garbage_as_grey = cfg.pipeline.processes.garbage_as_grey
+        self.save_pseudo_labels_per_loop = cfg.pipeline.processes.save_pseudo_labels_per_loop
 
         # config regarding inference
         self.inference = cfg.segmenter.inference
-        self.preds_src = os.path.join(self.data_src, 'preds')
+        self.preds_src = ""
         self.problematic_tiles = []
         self.empty_tiles = []
 
@@ -55,10 +61,15 @@ class Pipeline():
         self.training = cfg.segmenter.training
         self.model_checkpoint_src = cfg.segmenter.inference.model_checkpoint_src
         self.current_epoch = 0
-        self.training.result_src_name = datetime.now().strftime(r"%Y%m%d_%H%M%S_") + self.training.result_src_name_suffixe
+
+        # config regarding results
+        self.result_src_name_suffixe = cfg.pipeline.result_src_name_suffixe
+        self.result_src_name = datetime.now().strftime(r"%Y%m%d_%H%M%S_") + self.result_src_name_suffixe
         # self.training.result_src_name = "20250417_133119_test"
-        self.result_dir = os.path.join(self.root_src, self.training.result_training_dir, self.training.result_src_name)
+        self.result_dir = os.path.join(self.root_src, self.results_root_src, self.result_src_name)
+        self.result_current_loop_dir = os.path.join(self.result_dir, str(self.current_loop))
         self.result_pseudo_labels_dir = os.path.join(self.result_dir, 'pseudo_labels/')
+        # self.result_pseudo_labels_dir = f'results/trainings/{self.result_src_name}/pseudo_labels/'
 
         #   _create result dirs
         os.makedirs(self.result_dir, exist_ok=True)
@@ -82,7 +93,7 @@ class Pipeline():
             'F1', 'map',
             ]
         self.training_metrics = pd.DataFrame(columns=training_metrics_columns)
-        self.training_metrics_src = os.path.join(self.root_src, self.training.result_training_dir, self.training.result_src_name, 'training_metrics.csv')
+        self.training_metrics_src = os.path.join(self.result_dir, 'training_metrics.csv')
         self.training_metrics.to_csv(self.training_metrics_src, sep=';', index=False)
 
         #   _ inference metrics
@@ -92,7 +103,7 @@ class Pipeline():
             'Rec', 'mIoU',
             ]
         self.inference_metrics = pd.DataFrame(columns=inference_metrics_columns)
-        self.inference_metrics_src = os.path.join(self.root_src, self.training.result_training_dir, self.training.result_src_name, 'inference_metrics.csv')
+        self.inference_metrics_src = os.path.join(self.result_dir, 'inference_metrics.csv')
         self.inference_metrics.to_csv(self.inference_metrics_src, sep=';', index=False)
 
     @staticmethod
@@ -153,117 +164,6 @@ class Pipeline():
 
         # return exit code
         return process.returncode
-
-    @staticmethod
-    def split_instance(src_file_in, keep_ground=False, verbose=True):
-        # Define target folder:
-        dir_target = os.path.dirname(src_file_in) + '/' + src_file_in.split('/')[-1].split('.')[0] + "_split_instance"
-
-        if not os.path.exists(dir_target):
-            os.makedirs(dir_target)
-
-        points_segmented = laspy.read(src_file_in)
-
-        for idx, instance in tqdm(enumerate(set(points_segmented.PredInstance)), total=len(set(points_segmented.PredInstance)), disable=~verbose):
-            if not keep_ground and instance == 0:
-                continue
-            file_name = src_file_in.split('\\')[-1].split('/')[-1].split('.laz')[0] + f'_{instance}.laz'
-            src_instance = os.path.join(dir_target, file_name)
-
-            las = laspy.read(src_file_in)
-
-            pred_instance = las['PredInstance']
-
-            mask = pred_instance == instance
-
-            filtered_points = las.points[mask]
-
-            # new_header = las.header.copy()
-
-            filtered_las = laspy.LasData(las.header)
-            filtered_las.points = filtered_points
-
-            # Preserve CRS if it exists
-            # crs = las.header.parse_crs()
-            # if crs:
-            #     filtered_las.header.parse_crs().wkt = crs.to_wkt()
-
-            # Write the filtered file
-            filtered_las.write(src_instance)
-
-            # # Define the PDAL pipeline for filtering
-            # # Step 1: Fix LAS header and write to a temporary file
-            # fix_pipeline_json = {
-            #     "pipeline": [
-            #         {
-            #             "type": "readers.las",
-            #             "filename": src_file_in,
-            #             "override_srs": "EPSG:2056"  # or whatever CRS your data uses
-            #         },
-            #         {
-            #             "type": "writers.las",
-            #             "filename": "temp_fixed.laz",
-            #             "global_encoding": 1
-            #         }
-            #     ]
-            # }
-            # fix_pipeline = pdal.Pipeline(json.dumps(fix_pipeline_json))
-            # fix_pipeline.execute()
-
-            # # Step 2: Apply expression filter on the fixed file
-            # filter_pipeline_json = {
-            #     "pipeline": [
-            #         "temp_fixed.laz",
-            #         {
-            #             "type": "filters.expression",
-            #             "expression": f"PredInstance == {instance}"
-            #         },
-            #         file_src
-            #     ]
-            # }
-
-            # filter_pipeline = pdal.Pipeline(json.dumps(filter_pipeline_json))
-            # filter_pipeline.execute()
-            # # Run PDAL pipeline
-            # # pipeline = pdal.Pipeline(json.dumps(pipeline_json))
-            # # pipeline.execute()
-
-        if verbose:
-            print(f"INSTANCE SPLITTING DONE on {src_file_in}")
-
-    @staticmethod
-    def split_semantic(src, verbose=True):
-        # Define target folder:
-        dir_target = os.path.dirname(src) + '/' + src.split('/')[-1].split('.')[0] + "_split_semantic"
-
-        if not os.path.exists(dir_target):
-            os.makedirs(dir_target)
-
-        points_segmented = laspy.read(src)
-        val_to_name = ['ground', 'tree']
-
-        for val, name in enumerate(val_to_name):
-            file_name = src.split('\\')[-1].split('/')[-1].split('.laz')[0] + f'_{name}.laz'
-            file_src = os.path.join(dir_target, file_name)
-
-            # Define the PDAL pipeline for filtering
-            pipeline_json = {
-                "pipeline": [
-                    src,
-                    {
-                        "type": "filters.expression",
-                        "expression": f"PredSemantic == {val}"
-                    },
-                    file_src
-                ]
-            }
-
-            # Run PDAL pipeline
-            pipeline = pdal.Pipeline(json.dumps(pipeline_json))
-            pipeline.execute()
-            
-        if verbose:
-            print("SEMANTIC SPLITTING DONE")
 
     @staticmethod
     def change_var_val_yaml(src_yaml, var, val):
@@ -480,7 +380,7 @@ class Pipeline():
         # loop on files:
         list_files = [f for f in os.listdir(self.preds_src) if f.endswith(self.file_format)]
         for _, file in tqdm(enumerate(list_files), total=len(list_files), desc="Processing"):
-            self.split_instance(os.path.join(self.preds_src, file), verbose=verbose)
+            split_instance(os.path.join(self.preds_src, file), verbose=verbose)
 
             # convert instances to pcd
             dir_target = self.preds_src + '/' + file.split('/')[-1].split('.')[0] + "_split_instance"
@@ -518,6 +418,7 @@ class Pipeline():
         for _, child in tqdm(enumerate(list_folders), total=len(list_folders), desc='Processing'):
             if verbose:
                 print("Processing sample : ", child)
+            
             # load original file
             # original_file_src = os.path.join(self.data_src, child.split('_out')[0] + '.' + self.file_format)
             original_file_src = os.path.join(self.result_pseudo_labels_dir, child.split('_out')[0] + '.' + self.file_format)
@@ -603,8 +504,18 @@ class Pipeline():
                 else:
                     raise ValueError("Problem in the setting of the semantic pseudo-labels!")
                 
-            # saving back original file
+            # saving back original file and also to corresponding loop if flag set to
             new_file.write(original_file_src)
+            if self.save_pseudo_labels_per_loop:
+                os.makedirs(os.path.join(self.result_current_loop_dir, "pseudo_labels"), exist_ok=True)
+                loop_file_src = os.path.join(self.result_current_loop_dir, "pseudo_labels", os.path.basename(original_file_src))
+                new_file.write(loop_file_src)
+            
+        # removing unsused tiles from pseudo-label directory (so that it is not processed by the training phase)
+        list_tiles_pseudo_labels = [x for x in os.listdir(self.result_pseudo_labels_dir) if x.endswith(self.file_format)]
+        for tile_name in list_tiles_pseudo_labels:
+            if tile_name not in self.tiles_to_process:
+                os.remove(os.path.join(self.result_pseudo_labels_dir, tile_name))
 
     def process_row(self, coords_original_file_view, row_id):
         # Find matching points between original file and cluster
@@ -660,6 +571,11 @@ class Pipeline():
             )
 
     def train(self):
+        # test if enough tiles available
+        for type in ['train', 'test', 'val']:
+            if len([x for x in os.listdir(os.path.join(self.result_pseudo_labels_dir, 'treeinsfused/raw/pseudo_labels')) if x.split('.')[0].endswith(type)]) == 0:
+                raise InterruptedError(f"No {type} tilse for training process!!!")
+
         print("Training:")
         # modify dataset config file
         Pipeline.change_var_val_yaml(
@@ -672,7 +588,8 @@ class Pipeline():
         Pipeline.change_var_val_yaml(
             src_yaml=self.training.config_results_src,
             var='hydra/run/dir',
-            val="../../" + os.path.normpath(self.training.result_training_dir) + "/" + self.training.result_src_name + '/' + str(self.current_loop),
+            val="../../" + os.path.normpath(self.results_root_src) + "/" + self.result_src_name + '/' + str(self.current_loop),
+            # val=self.result_current_loop_dir,
         )
 
         # run training script
@@ -685,9 +602,117 @@ class Pipeline():
                      self.training.sample_per_epoch,
                      model_checkpoint,
                      self.training_metrics_src,
-                     self.current_loop,],
+                     self.current_loop,
+                     ],
             )
         
         # update path to checkpoint
-        self.model_checkpoint_src = os.path.join(self.cfg.pipeline.root_src, os.path.normpath(self.training.result_training_dir) + "/" + self.training.result_src_name + '/' + str(self.current_loop))
+        # self.model_checkpoint_src = os.path.join(self.training.result_training_dir, str(self.current_loop))
+        self.model_checkpoint_src = self.result_current_loop_dir
+
+    def visualization(self):
+        print("Saving metrics visualizations")
         
+        # creates location
+        location_src = os.path.join(self.result_dir, "images")
+        
+        show_global_metrics(
+            src_data=self.training_metrics_src,
+            src_location=os.path.join(location_src, 'training_metrics.png'),
+            show_figure=False,
+            save_figure=True,
+            )
+        show_inference_counts(
+            self.inference_metrics_src,
+            src_location=os.path.join(location_src, 'inference_count.png'),
+            show_figure=False,
+            save_figure=True,
+            )
+        show_inference_metrics(
+            self.inference_metrics_src,
+            src_location=os.path.join(location_src, 'inference_metrics.png'),
+            show_figure=False,
+            save_figure=True,
+            )
+
+    def test(self):
+        # test if enough tiles available
+        # for type in ['train', 'test', 'val']:
+        #     if len([x for x in os.listdir(os.path.join(self.result_pseudo_labels_dir, 'treeinsfused/raw/pseudo_labels')) if x.split('.')[0].endswith(type)]) == 0:
+        #         raise InterruptedError(f"No {type} tilse for training process!!!")
+
+        print("Training:")
+        # modify dataset config file
+        # Pipeline.change_var_val_yaml(
+        #     src_yaml=self.training.config_data_src,
+        #     var='data/dataroot',
+        #     # val=os.path.join(self.result_pseudo_labels_dir),
+        #     val=os.path.join(self.result_pseudo_labels_dir),
+        # )
+
+        # # modify results directory
+        # Pipeline.change_var_val_yaml(
+        #     src_yaml=self.training.config_results_src,
+        #     var='hydra/run/dir',
+        #     # val="../../" + os.path.normpath(self.results_root_src) + "/" + self.result_src_name + '/' + str(self.current_loop),
+        #     val=self.result_current_loop_dir,
+        # )
+
+        # run training script
+        # model_checkpoint = self.model_checkpoint_src if self.model_checkpoint_src != "None" else "/home/pdm/models/SegmentAnyTree/model_file"
+        model_checkpoint = "/home/pdm/models/SegmentAnyTree/model_file"
+        self.run_subprocess(
+            src_script="/home/pdm/models/SegmentAnyTree/",
+            script_name="./run_pipeline.sh",
+            params= [self.training.num_epochs_per_loop, 
+                     self.training.batch_size, 
+                     self.training.sample_per_epoch,
+                     model_checkpoint,
+                     self.training_metrics_src,
+                     self.current_loop,
+                     ],
+            )
+
+if __name__ == "__main__":
+    from time import time
+    import torch
+
+    cfg_dataset = OmegaConf.load('./config/dataset.yaml')
+    cfg_preprocess = OmegaConf.load('./config/preprocessing.yaml')
+    cfg_pipeline = OmegaConf.load('./config/pipeline.yaml')
+    cfg_classifier = OmegaConf.load('./config/classifier.yaml')
+    cfg_segmenter = OmegaConf.load('./config/segmenter.yaml')
+    cfg = OmegaConf.merge(cfg_dataset, cfg_preprocess, cfg_pipeline, cfg_classifier, cfg_segmenter)
+
+    # load pipepline arguments
+    ROOT_SRC = cfg.pipeline.root_src
+
+    # load data
+    NUM_LOOPS = cfg.pipeline.num_loops
+    DATA_SRC = os.path.join(cfg.dataset.project_root_src, cfg.dataset.data_src)
+    FILE_FORMAT = cfg.dataset.file_format
+
+    TRAIN_FRAC = cfg.pipeline.train_frac
+    TEST_FRAC = cfg.pipeline.test_frac
+    VAL_FRAC = cfg.pipeline.val_frac
+
+    # processes
+    # SAVE_PSEUDO_LABELS_PER_LOOP = cfg.pipeline.processes.save_pseudo_labels_per_loop
+
+
+    # assertions
+    assert TRAIN_FRAC + TEST_FRAC + VAL_FRAC == 1.0
+
+    # start timer
+    time_start_process = time()
+
+    # create pipeline
+    # pipeline = Pipeline(cfg) 
+    # pipeline.result_pseudo_labels_dir = r"D:\PDM_repo\Github\PDM\results\trainings\20250505_134754_test\pseudo_labels"
+    # pipeline.data_src = os.path.join(pipeline.data_src, "loops/0")
+    # pipeline.preds_src = os.path.join(pipeline.data_src, "preds")
+    # pipeline.create_pseudo_labels()
+    path = r"D:\PDM_repo\Github\PDM\results\trainings\20250505_151920_test\pseudo_labels\treeinsfused\processed_0.2\train.pt"
+    data, slices = torch.load(path)
+    print(data)
+    print(slice)

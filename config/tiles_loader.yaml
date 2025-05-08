@@ -1,6 +1,8 @@
 tiles_loader:
+  root_src: /home/pdm
   original_file_path: data/full_dataset/color_grp_full.laz
-  tiles_destination: data/full_dataset/test/dataset_full_${tiles_loader.tiling.tile_size}m
+  results_destination: data/full_dataset/test
+  tiles_destination: ${tiles_loader.results_destination}/dataset_full_${tiles_loader.tiling.tile_size}m
   preprocess:
     do_flatten: True
     do_remove_duplicates: True
@@ -8,6 +10,6 @@ tiles_loader:
     tile_size: 100
     pack_size: 10
   trimming:
-    results_dest: data/full_dataset/test
-    method: drop  # choose between {'drop', 'tree', 'single'}
+    method: tree  # choose between {'drop', 'tree'}
+    tree_list: [5, 3, 1]  # if method=tree, number of samples per levele
     do_remove_empties: True # use of the classifier to remove the tiles that have no predictions classified as tree

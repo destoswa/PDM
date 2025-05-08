@@ -73,6 +73,7 @@ def main(cfg):
         print(f"===== LOOP {loop + 1} / {NUM_LOOPS} =====")
         time_start_loop = time()
         pipeline.current_loop = loop
+        pipeline.result_current_loop_dir = os.path.join(pipeline.result_dir, str(loop))
 
         # prepare architecture
         os.makedirs(os.path.join(DATA_SRC, f'loops/{loop}/'), exist_ok=True)
@@ -149,13 +150,13 @@ def main(cfg):
         pipeline.prepare_data()
         pipeline.train()
 
-        # saving results
-        if SAVE_PSEUDO_LABELS_PER_LOOP:
-            os.makedirs(os.path.join(pipeline.result_dir, f'{loop}/pseudo_labels'))
-            for file in [f for f in os.listdir(pipeline.result_dir) if f.endswith(FILE_FORMAT)]:
-                shutil.copyfile(os.path.join(pipeline.result_dir, file), 
-                                os.path.join(pipeline.result_dir, f'loops/{loop}/pseudo_labels')
-                                )
+        # # saving results
+        # if SAVE_PSEUDO_LABELS_PER_LOOP:
+        #     os.makedirs(os.path.join(pipeline.result_dir, f'{loop}/pseudo_labels'))
+        #     for file in [f for f in os.listdir(pipeline.result_dir) if f.endswith(FILE_FORMAT)]:
+        #         shutil.copyfile(os.path.join(pipeline.result_dir, file), 
+        #                         os.path.join(pipeline.result_dir, f'loops/{loop}/pseudo_labels')
+        #                         )
 
         delta_time_loop = time() - time_start_loop
         hours = int(delta_time_loop // 3600)
@@ -173,6 +174,9 @@ def main(cfg):
         index=False,
     )
 
+    # show metrics
+    pipeline.visualization()
+
     # show time to full process
     delta_time_process = time() - time_start_process
     hours = int(delta_time_process // 3600)
@@ -188,4 +192,13 @@ if __name__ == "__main__":
     cfg_classifier = OmegaConf.load('./config/classifier.yaml')
     cfg_segmenter = OmegaConf.load('./config/segmenter.yaml')
     cfg = OmegaConf.merge(cfg_dataset, cfg_preprocess, cfg_pipeline, cfg_classifier, cfg_segmenter)
+
+
+
+    # pipeline = Pipeline(cfg)
+    # pipeline.test()
+    # quit()
+
+
+
     main(cfg)

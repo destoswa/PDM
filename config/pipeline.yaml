@@ -1,6 +1,7 @@
 pipeline:
   root_src: /home/pdm
-  results_src: /home/pdm/results
+  results_root_src: results/trainings
+  result_src_name_suffixe: test
   num_loops: 3
   train_frac: 0.7
   val_frac: 0.15

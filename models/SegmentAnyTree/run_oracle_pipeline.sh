@@ -3,6 +3,11 @@ set -e
 DOCKER_IN_FOLDER="$1"
 DOCKER_OUT_FOLDER="$2"
 
+echo "===================="
+echo "$DOCKER_IN_FOLDER"
+echo "$DOCKER_OUT_FOLDER"
+echo "===================="
+
 # Set DEBUG_MODE (change this to true or false as needed, DEBUG is for local testing, false is for running on the oracle)
 DEBUG_MODE=true
 # DEBUG_MODE=false

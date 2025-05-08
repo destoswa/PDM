@@ -18,8 +18,10 @@ def main(cfg):
     if cfg.pretty_print:
         print(OmegaConf.to_yaml(cfg))
     setattr(cfg, 'is_training',True)
+    print("TEEEEESTTTT")
     trainer = Trainer(cfg)
     # return
+    print("TEEEEESTTTT")
     metrics = trainer.train()
     print("=====\nMETRICS:\n", metrics)
 
