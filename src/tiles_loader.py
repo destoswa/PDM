@@ -276,7 +276,7 @@ class TilesLoader():
             )
 
         # create temp folder
-        temp_seg_src = os.path.join(self.results_dest, 'temp_seg')
+        temp_seg_src = os.path.join(self.root_src, self.results_dest, 'temp_seg')
         if os.path.exists(temp_seg_src):
             shutil.rmtree(temp_seg_src)
         os.makedirs(temp_seg_src)
@@ -300,23 +300,26 @@ class TilesLoader():
             # segment on it
             segmentation_results_dir = os.path.join(self.results_dest, "segmented")
             os.makedirs(self.segmentation_results_dir, exist_ok=True)
+            # return_code = self.run_subprocess(
+            #     src_script=self.segmenter_conf.root_model_src,
+            #     script_name="./run_inference.sh",
+            #     params= [temp_seg_src, self.segmentation_results_dir, True],
+            #     verbose=verbose
+            #     )
+            print("=========")
+            print(temp_seg_src)
+            print(self.segmentation_results_dir)
+            print("=========")
             return_code = self.run_subprocess(
                 src_script=self.segmenter_conf.root_model_src,
-                script_name="./run_inference.sh",
-                params= [temp_seg_src, self.segmentation_results_dir, True],
+                script_name="./run_oracle_pipeline.sh",
+                params= [temp_seg_src, self.segmentation_results_dir],
                 verbose=verbose
                 )
             
-            # return_code = self.run_subprocess(
-            #     src_script=self.segmenter_conf.root_model_src,
-            #     script_name="./run_oracle_pipeline.sh",
-            #     params= [temp_seg_src, self.segmentation_results_dir],
-            #     verbose=verbose
-            #     )
-            
             # test
             # return_code = pack_passed[id_pack]
-            
+
             # catch errors
             if return_code != 0:
                 if verbose:
@@ -445,9 +448,9 @@ if __name__ == "__main__":
     cfg_classifier = OmegaConf.load("config/classifier.yaml")
     cfg = OmegaConf.merge(cfg_tilesloader, cfg_segmenter, cfg_classifier)
     tiles_loader = TilesLoader(cfg)
-    # tiles_loader.tiling()
+    tiles_loader.tiling()
     tiles_loader.trimming(verbose=True)
-    # tiles_loader.classify(verbose=False)
+    tiles_loader.classify(verbose=False)
     
     delta_time = time.time() - time_start
     print(f"Process done in {delta_time} seconds")

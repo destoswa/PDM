@@ -434,7 +434,7 @@ class CylinderSampling:
             elif torch.is_tensor(item):
                 item = item.clone()
             setattr(new_data, key, item)
-        #setattr(new_data, 'center', self._centre)
+        setattr(new_data, 'center', self._centre)
         return new_data
 
     def __repr__(self):

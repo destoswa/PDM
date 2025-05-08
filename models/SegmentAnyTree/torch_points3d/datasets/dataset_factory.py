@@ -43,7 +43,5 @@ def instantiate_dataset(dataset_config) -> BaseDataset:
     and it is case-insensitive.
     """
     dataset_cls = get_dataset_class(dataset_config)
-    print("YAAAAH")
     dataset = dataset_cls(dataset_config)
-    print("YAAAAH")
     return dataset
