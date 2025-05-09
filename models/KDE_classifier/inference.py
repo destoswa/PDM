@@ -10,6 +10,7 @@ from models.model import KDE_cls_model
 from time import time
 from omegaconf import OmegaConf
 import argparse
+from packaging import version
 
 
 # ===================================================
@@ -20,8 +21,8 @@ do_preprocess = True
 do_update_caching = True
 
 # inference
-batch_size = 12
-num_workers = 12
+batch_size = 8
+num_workers = 8
 num_class = 3
 grid_size = 64
 kernel_size = 1
@@ -51,7 +52,10 @@ def inference(args):
 
     # load the model
     model = KDE_cls_model(conf).to(torch.device('cuda'))
-    checkpoint = torch.load(SRC_MODEL)
+    if version.parse(torch.__version__) >= version.parse("2.1.0"):
+        checkpoint = torch.load(SRC_MODEL, weights_only=False)
+    else:
+        checkpoint = torch.load(SRC_MODEL)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
 

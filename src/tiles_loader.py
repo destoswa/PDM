@@ -9,15 +9,20 @@ import laspy
 from omegaconf import OmegaConf
 import time
 import threading
-import pdal
 import json
 import warnings
 import zipfile
 
 if __name__ == "__main__":
     sys.path.append(os.getcwd())
-from src.splitting import split_instance
-from src.format_conversions import convert_all_in_folder
+
+ENV = os.environ['CONDA_DEFAULT_ENV']
+if ENV == "pdal_env":
+    import pdal
+    from src.splitting import split_instance
+    from src.format_conversions import convert_all_in_folder
+
+    
 
 
 class TilesLoader():
@@ -56,17 +61,17 @@ class TilesLoader():
         old_current_dir = os.getcwd()
         os.chdir(src_script)
         # construct command and run subprocess
-        script_str = script_name
-        # script_str = ['bash', script_name]
+        #script_str = script_name
+        script_str = ['bash', script_name]
         if params:
-            # for x in params:
-                # script_str.append(str(x))
-            script_str += ' ' + ' '.join([str(x) for x in params])
+            for x in params:
+                script_str.append(str(x))
+            #script_str += ' ' + ' '.join([str(x) for x in params])
         process = subprocess.Popen(
             script_str,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            shell=True,
+            shell=False,
             encoding='utf-8',
             errors='replace'
         )
@@ -306,10 +311,6 @@ class TilesLoader():
             #     params= [temp_seg_src, self.segmentation_results_dir, True],
             #     verbose=verbose
             #     )
-            print("=========")
-            print(temp_seg_src)
-            print(self.segmentation_results_dir)
-            print("=========")
             return_code = self.run_subprocess(
                 src_script=self.segmenter_conf.root_model_src,
                 script_name="./run_oracle_pipeline.sh",
@@ -326,6 +327,7 @@ class TilesLoader():
                     print(f"Problem with tiles:")
                     for file in pack:
                         print("\t", file)
+                for file in pack:
                         self.problematic_tiles.append(file)
             else:
                 # unzip results
@@ -349,6 +351,10 @@ class TilesLoader():
         # removing temp folder
         shutil.rmtree(temp_seg_src)
 
+        # saving list of problematic
+        with open(os.path.join(self.results_dest, 'problematic_tiles.txt'), 'w') as outfile:
+            for item in self.problematic_tiles:
+                outfile.write(f"{item}\n")
         # printing stuff for test
         print("State of the tree_list: ", self.trimming_tree_list)
         print("Files in the list: ", len(self.list_tiles))
@@ -356,7 +362,7 @@ class TilesLoader():
         print("Files in folder: ", len([x for x in os.listdir(os.path.join(segmentation_results_dir))]))
 
         if self.trimming_method == "tree":
-            self.trimming()
+            self.trimming(verbose=verbose)
 
     def preprocess(self):
         pass
@@ -380,7 +386,7 @@ class TilesLoader():
 
             #
             tile_full_path = os.path.join(self.segmentation_results_dir, file)
-            # split_instance(tile_full_path, path_out=self.classification_results_dir, verbose=verbose)
+            split_instance(tile_full_path, path_out=self.classification_results_dir, verbose=verbose)
 
             # convert instances to pcd
             dir_target = os.path.join(self.classification_results_dir, os.path.basename(tile_full_path).split('.')[0] + "_split_instance")
@@ -440,17 +446,25 @@ class TilesLoader():
     def split(self):
         pass
 
-if __name__ == "__main__":
-    
+if __name__ == "__main__":    
     time_start = time.time()
     cfg_tilesloader = OmegaConf.load("config/tiles_loader.yaml")
     cfg_segmenter = OmegaConf.load("config/segmenter.yaml")
     cfg_classifier = OmegaConf.load("config/classifier.yaml")
     cfg = OmegaConf.merge(cfg_tilesloader, cfg_segmenter, cfg_classifier)
     tiles_loader = TilesLoader(cfg)
-    tiles_loader.tiling()
-    tiles_loader.trimming(verbose=True)
-    tiles_loader.classify(verbose=False)
+    if len(sys.argv) > 1:
+        mode = sys.argv[1]
+        if mode == "trimming":
+            tiles_loader.trimming(verbose=False)
+        elif mode == "classification":
+            tiles_loader.classify(verbose=False)
+        else:
+            pass
+        quit()
+    #tiles_loader.tiling()
+    #tiles_loader.trimming(verbose=False)
+    tiles_loader.classify(verbose=True)
     
     delta_time = time.time() - time_start
     print(f"Process done in {delta_time} seconds")

@@ -3,10 +3,10 @@ set -e
 DOCKER_IN_FOLDER="$1"
 DOCKER_OUT_FOLDER="$2"
 
-echo "===================="
-echo "$DOCKER_IN_FOLDER"
-echo "$DOCKER_OUT_FOLDER"
-echo "===================="
+#echo "===================="
+#echo "$DOCKER_IN_FOLDER"
+#echo "$DOCKER_OUT_FOLDER"
+#echo "===================="
 
 # Set DEBUG_MODE (change this to true or false as needed, DEBUG is for local testing, false is for running on the oracle)
 DEBUG_MODE=true
@@ -14,10 +14,7 @@ DEBUG_MODE=true
 
 # Set the path (change this to the path taken from the config file)
 # if [ "$DEBUG_MODE" = true ]; then
-#     PATH_DATA='/home/nibio/mutable-outside-world' #TODO: change this to the path
-# else
-#     PATH_DATA='/home/datascience'
-# fi
+#     PATH_DATA='/home/nibio/mutable-outsidPATH_DATA
 
 PATH_DATA='/home/datascience'
 # re
