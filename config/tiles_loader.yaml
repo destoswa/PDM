@@ -1,7 +1,7 @@
 tiles_loader:
   root_src: /home/pdm
-  original_file_path: data/full_dataset/color_grp_full.las
-  results_destination: data/full_dataset
+  original_file_path: data/full_dataset_flat/color_grp_full_flat.las
+  results_destination: data/full_dataset_flat
   tiles_destination: ${tiles_loader.results_destination}/dataset_full_${tiles_loader.tiling.tile_size}m
   preprocess:
     do_flatten: True

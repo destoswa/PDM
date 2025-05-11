@@ -163,7 +163,7 @@ class TilesLoader():
     # === METHODS OF THE TILES LOADER ===
     # ===================================
 
-    def tiling(self):
+    def tiling(self, verbose):
         if os.path.exists(self.data_dest):
             answer = None
             while answer not in ['y', 'yes', 'n', 'no', ""]:
@@ -185,14 +185,16 @@ class TilesLoader():
             )
         
         # compute the estimate number of tiles
-        print("Computing the estimated number of tiles...")
+        if verbose:
+            print("Computing the estimated number of tiles...")
         original_file = laspy.read(self.data_src)
         x_min = original_file.x.min()
         x_max = original_file.x.max()
         y_min = original_file.y.min()
         y_max = original_file.y.max() 
         expected_tiles = ((x_max - x_min) * (y_max - y_min)) // self.tilesloader_conf.tiling.tile_size ** 2
-        print('Done!')
+        if verbose:
+            print('Done!')
 
         # create the pdal command
         pipeline_json = {
@@ -453,12 +455,26 @@ if __name__ == "__main__":
     cfg_classifier = OmegaConf.load("config/classifier.yaml")
     cfg = OmegaConf.merge(cfg_tilesloader, cfg_segmenter, cfg_classifier)
     tiles_loader = TilesLoader(cfg)
+
     if len(sys.argv) > 1:
+
+        # tests and variable declaration
+        assert len(sys.argv) == 3
         mode = sys.argv[1]
-        if mode == "trimming":
-            tiles_loader.trimming(verbose=False)
+        verbose = True if sys.argv[2].lower() == 'true' else False
+        assert mode in ["tiling", "trimming", "classification"]
+        assert verbose in [True, False]
+        
+        # call function
+        #print("Mode: ", mode, "\nverbose: ", verbose)
+        #quit()
+
+        if mode == "tiling":
+            tiles_loader.tiling(verbose=verbose)
+        elif mode == "trimming":
+            tiles_loader.trimming(verbose=verbose)
         elif mode == "classification":
-            tiles_loader.classify(verbose=False)
+            tiles_loader.classify(verbose=verbose)
         else:
             pass
         quit()
