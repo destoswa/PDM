@@ -147,8 +147,11 @@ def main(cfg):
         pipeline.stats_on_tiles()
 
         # train
-        pipeline.prepare_data()
-        pipeline.train()
+        pipeline.prepare_data(verbose=False)
+        pipeline.train(verbose=False)
+
+        # save logs
+        pipeline.save_log(pipeline.result_current_loop_dir)
 
         # # saving results
         # if SAVE_PSEUDO_LABELS_PER_LOOP:

@@ -50,7 +50,7 @@ elif [ "$MODE" == "tiling" ]; then
 elif [ "$MODE" == "trimming" ]; then
     activate_and_run "pdm_env" "trimming" "$VERBOSE"
 elif [ "$MODE" == "classification" ]; then
-    activate_and_run "pdm_env" "classification" "$VERBOSE"
+    activate_and_run "pdal_env" "classification" "$VERBOSE"
 else
     echo "WRONG ARGUMENT!"
     exit 1

@@ -10,5 +10,5 @@ segmenter:
     config_results_src: /home/pdm/models/SegmentAnyTree/conf/hydra/output/custom.yaml
     batch_size: 2
     num_epochs_per_loop: 2
-    sample_per_epoch: 100
+    sample_per_epoch: 10
 

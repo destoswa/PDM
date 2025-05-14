@@ -597,9 +597,9 @@ class TreeinsFusedDataset(BaseDataset):
 
         # @Treeins: case for training/when running train.py
         if len(self.dataset_opt.fold) == 0 or isinstance(self.dataset_opt.fold[0], int):
-            print("--------------")
-            print("DATA PATH: ", self._data_path)
-            print("--------------")
+            # print("--------------")
+            # print("DATA PATH: ", self._data_path)
+            # print("--------------")
             self.train_dataset = dataset_cls(
                 self._data_path,
                 sample_per_epoch=dataset_opt.sample_per_epoch,
@@ -612,7 +612,7 @@ class TreeinsFusedDataset(BaseDataset):
                 transform=self.train_transform,
                 keep_instance=True,
             )
-            print("DUURP")
+            # print("DUURP")
             self.val_dataset = dataset_cls(
                 self._data_path,
                 sample_per_epoch=-1,

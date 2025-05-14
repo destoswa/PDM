@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import laspy
+from tqdm import tqdm
 
 """
 Ideas of plots:
@@ -146,7 +147,7 @@ def show_inference_metrics(data_src, metrics = ['PQ', 'SQ', 'RQ', 'Pre', 'Rec', 
         plt.show()
 
 
-def show_semantic_evolution(data_folder, src_location=None, show_figure=True, save_figure=False):
+def show_pseudo_labels_evolution(data_folder, src_location=None, show_figure=True, save_figure=False):
     # load and generate data to show
     num_loop = 0
     count= {}
@@ -154,10 +155,20 @@ def show_semantic_evolution(data_folder, src_location=None, show_figure=True, sa
     total_not_change = {}
     not_change_in_tile = {}
     previous_tiles = {}
+
+    # finding the number of loops
+    lst_loops = []
     while True:
         if not str(num_loop) in os.listdir(data_folder):
             break
-        print("LOOP ", num_loop)
+        lst_loops.append(num_loop)
+        num_loop += 1
+    if num_loop == 0:
+        print("No loop folder from which to extract the pseudo-labels")
+        return   
+    
+    # processing each loop
+    for _, num_loop in tqdm(enumerate(lst_loops), total=len(lst_loops), desc="Processing pseudo-labels for visualization"):
         count[num_loop] = {}
         change_from_previous[num_loop] = {}
         total_not_change[num_loop] = {}
@@ -187,23 +198,21 @@ def show_semantic_evolution(data_folder, src_location=None, show_figure=True, sa
                     # total no-change
                     total_not_change[num_loop][tile_src].append(np.sum(np.array(not_change_in_tile[num_loop][tile_src]) & np.array(mask)))
     
-                previous_tiles[tile_src] = tile.classification
-        num_loop += 1
-
-    if num_loop == 0:
-        print("No loop folder from which to extract the pseudo-labels")
-        return   
+                previous_tiles[tile_src] = tile.classification 
      
     # aggregation
-    count_agg= {}
-    change_from_previous_agg = {}
-    total_not_change_agg = {}
-    for num_loop in count.keys():
-        count_agg[num_loop] = np.sum(np.array([tile_val for tile_val in count[num_loop].values()]), axis=0)
-        change_from_previous_agg[num_loop] = np.sum(np.array([tile_val for tile_val in change_from_previous[num_loop].values()]), axis=0)
-        total_not_change_agg[num_loop] = np.sum(np.array([tile_val for tile_val in total_not_change[num_loop].values()]), axis=0)
+    categories = ['grey', 'ground', 'tree']
+    count_agg= {x: [] for x in categories}
+    change_from_previous_agg= {x: [] for x in categories}
+    total_not_change_agg= {x: [] for x in categories}
 
-    # plot
+    for num_loop in count.keys():
+        for id_cat, cat in enumerate(categories):
+            count_agg[cat].append(np.sum(np.array([tile_val for tile_val in count[num_loop].values()]), axis=0)[id_cat])
+            change_from_previous_agg[cat].append(np.sum(np.array([tile_val for tile_val in change_from_previous[num_loop].values()]), axis=0)[id_cat])
+            total_not_change_agg[cat].append(np.sum(np.array([tile_val for tile_val in total_not_change[num_loop].values()]), axis=0)[id_cat])
+    
+    # plotting semantic
     fig, axs = plt.subplots(2,2, figsize=(15,15))
     axs = axs.flatten()
     sns.lineplot(pd.DataFrame(count_agg), ax=axs[0])
@@ -218,12 +227,41 @@ def show_semantic_evolution(data_folder, src_location=None, show_figure=True, sa
     
     plt.show()
 
+    # plotting instances
+    #...
+    
 
 if __name__ == '__main__':
+
+    
+    # Example data
+    labels = ['Item 1', 'Item 2', 'Item 3']
+    above = [0.7, 0.4, 0.6]   # e.g., % of category A
+    below = [0.3, 0.6, 0.4]   # e.g., % of category B
+
+    x = np.arange(len(labels))
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    # Plot the bars
+    ax.bar(x, above, label='Category A', color='steelblue')
+    ax.bar(x, [-b for b in below], label='Category B', color='salmon')
+
+    # Customizing the plot
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.axhline(0, color='black', linewidth=0.8)
+    ax.set_ylabel('Percentage')
+    ax.set_title('Diverging Bar Plot')
+    ax.legend()
+
+    plt.tight_layout()
+    plt.show()
+    quit()
     src_data_train = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250427_140314_test\training_metrics.csv"
     src_data_inf = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250427_140314_test\inference_metrics.csv"
     src_data_semantic = r"D:\PDM_repo\Github\PDM\results\trainings\20250507_084214_test"
-    show_semantic_evolution(src_data_semantic)
+    show_pseudo_labels_evolution(src_data_semantic)
     quit()
     # print(loops)
     # show_global_metrics(src_data_train)

@@ -47,7 +47,7 @@ class TilesLoader():
         # self.trimming = cfg.trimming
         # self.preprocess = cfg.preprocess
         
-        assert os.path.exists(self.data_src)
+        # assert os.path.exists(self.data_src)
 
 
     # ======================
@@ -245,24 +245,26 @@ class TilesLoader():
                 return
 
         # security
-        if len(self.list_tiles) == 0:
-            print("No tiles are loaded in the system!")
-            answer = None
-            while answer not in ['y', 'yes', 'n', 'no', '']:
-                answer = input("Do you want to try and load them (y/n)?")
-                if answer.lower() in ['y', 'yes', '']:
-                    if len(set([x.split('.')[-1] for x in os.listdir(self.data_dest)])) > 1:
-                        warnings.warn('It seems like the resulting folder contains files with different extensions!')
-                    self.list_tiles = [x for x in os.listdir(self.data_dest)]
-                    print('yes')
-                elif answer.lower() in ['n', 'no']:
-                    print("Stoping the process..")
-                    quit()
-                else:
-                    print("wrong input.")
-            if len(self.list_tiles) == 0:
-                print("No files in the destination folder")
-                quit()
+        self.list_tiles = [x for x in os.listdir(self.data_dest)]
+        assert len(self.list_tiles) != 0
+
+            # print("No tiles are loaded in the system!")
+            # answer = None
+            # while answer not in ['y', 'yes', 'n', 'no', '']:
+            #     answer = input("Do you want to try and load them (y/n)?")
+            #     if answer.lower() in ['y', 'yes', '']:
+            #         if len(set([x.split('.')[-1] for x in os.listdir(self.data_dest)])) > 1:
+            #             warnings.warn('It seems like the resulting folder contains files with different extensions!')
+            #         self.list_tiles = [x for x in os.listdir(self.data_dest)]
+            #         print('yes')
+            #     elif answer.lower() in ['n', 'no']:
+            #         print("Stoping the process..")
+            #         quit()
+            #     else:
+            #         print("wrong input.")
+            # if len(self.list_tiles) == 0:
+            #     print("No files in the destination folder")
+            #     quit()
 
         # creates pack of samples to infer on
         if self.pack_size > 1:
@@ -319,7 +321,7 @@ class TilesLoader():
                 params= [temp_seg_src, self.segmentation_results_dir],
                 verbose=verbose
                 )
-            
+            quit()
             # test
             # return_code = pack_passed[id_pack]
 

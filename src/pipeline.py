@@ -45,6 +45,7 @@ class Pipeline():
         self.upgrade_ground = cfg.pipeline.processes.upgrade_ground
         self.garbage_as_grey = cfg.pipeline.processes.garbage_as_grey
         self.save_pseudo_labels_per_loop = cfg.pipeline.processes.save_pseudo_labels_per_loop
+        self.log = ""
 
         # config regarding inference
         self.inference = cfg.segmenter.inference
@@ -73,6 +74,7 @@ class Pipeline():
 
         #   _create result dirs
         os.makedirs(self.result_dir, exist_ok=True)
+        os.makedirs(self.result_current_loop_dir, exist_ok=True)
         os.makedirs(self.result_pseudo_labels_dir, exist_ok=True)
 
         #   _copy files
@@ -123,11 +125,15 @@ class Pipeline():
         if delete_zip:
             os.remove(zip_path)
 
-    @staticmethod
-    def run_subprocess(src_script, script_name, params=None, verbose=True):
+    # @staticmethod
+    def run_subprocess(self, src_script, script_name, add_to_log=True, params=None, verbose=True):
         # go at the root of the segmenter
         old_current_dir = os.getcwd()
         os.chdir(src_script)
+
+        # add title to log
+        if add_to_log:
+            self.log += f"\n========\nSCRIPT: {script_name}\n========\n"
 
         # construct command and run subprocess
         script_str = script_name
@@ -153,6 +159,8 @@ class Pipeline():
 
             if realtime_output and verbose:
                 print(realtime_output.strip(), flush=True)
+            if add_to_log:
+                self.log += realtime_output.strip() + "\n"
 
         # Ensure the process has fully exited
         process.wait()
@@ -561,16 +569,17 @@ class Pipeline():
             for metric_name, metric_val in metrics.items():
                 self.inference_metrics.loc[(self.inference_metrics.name == file) & (self.inference_metrics.num_loop == self.current_loop), metric_name] = metric_val
 
-    def prepare_data(self):
+    def prepare_data(self, verbose=True):
         print("Prepare data:")
         self.run_subprocess(
             src_script="/home/pdm/models/SegmentAnyTree/",
             script_name="./run_sample_data_conversion.sh",
             # params= [self.data_src],
             params= [self.result_pseudo_labels_dir],
+            verbose=verbose
             )
 
-    def train(self):
+    def train(self, verbose=True):
         # test if enough tiles available
         for type in ['train', 'test', 'val']:
             if len([x for x in os.listdir(os.path.join(self.result_pseudo_labels_dir, 'treeinsfused/raw/pseudo_labels')) if x.split('.')[0].endswith(type)]) == 0:
@@ -604,6 +613,7 @@ class Pipeline():
                      self.training_metrics_src,
                      self.current_loop,
                      ],
+            verbose=verbose,
             )
         
         # update path to checkpoint
@@ -672,6 +682,12 @@ class Pipeline():
                      self.current_loop,
                      ],
             )
+
+    def save_log(self, dest, clear_after=True):
+        with open(os.path.join(dest, "log.txt"), "w") as file:
+            file.write(self.log)
+        if clear_after:
+            self.log = ""
 
 if __name__ == "__main__":
     from time import time
