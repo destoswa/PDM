@@ -1,9 +1,12 @@
 import os
+import sys
 import numpy as np
 from tqdm import tqdm
 import json
 import laspy
-import pdal
+ENV = os.environ['CONDA_DEFAULT_ENV']
+if ENV == "pdal_env":
+    import pdal
 import concurrent.futures
 from functools import partial
 
@@ -117,4 +120,42 @@ def convert_all_in_folder(src_folder_in, src_folder_out, in_type, out_type, verb
         if file.endswith(in_type):
             file_out = file.split(in_type)[0] + out_type
             _ = getattr(Convertions, f"convert_{in_type}_to_{out_type}")(os.path.join(src_folder_in, file), os.path.join(src_folder_out, file_out), verbose=verbose)
-            
+
+
+if __name__ == "__main__":
+    if len(sys.argv) >= 5:
+        src_folder_in = sys.argv[1]
+        src_folder_out = sys.argv[2]
+        in_type = sys.argv[3]
+        out_type = sys.argv[4]
+        verbose = False
+        if len(sys.argv) == 6:
+            if sys.argv[5].lower() == "true":
+                verbose = True
+        
+        convert_all_in_folder(src_folder_in, src_folder_out, in_type, out_type, verbose)
+
+
+        # # tests and variable declaration
+        # assert len(sys.argv) == 3
+        # mode = sys.argv[1]
+        # verbose = True if sys.argv[2].lower() == 'true' else False
+        # assert mode in ["tiling", "trimming", "classification"]
+        # assert verbose in [True, False]
+        
+        # # call function
+        # #print("Mode: ", mode, "\nverbose: ", verbose)
+        # #quit()
+
+        # if mode == "tiling":
+        #     tiles_loader.tiling(verbose=verbose)
+        # elif mode == "trimming":
+        #     tiles_loader.trimming(verbose=verbose)
+        # elif mode == "classification":
+        #     tiles_loader.classify(verbose=verbose)
+        # else:
+        #     pass
+        # quit()
+    else:
+        print("Missing arguments!")
+        quit()

@@ -3,7 +3,6 @@ import shutil
 import numpy as np
 import pandas as pd
 from omegaconf import OmegaConf
-import pdal
 import random
 import laspy
 from tqdm import tqdm
@@ -12,7 +11,7 @@ from time import time
 # import warnings
 # warnings.filterwarnings("ignore")
 
-from src.format_conversions import convert_all_in_folder
+# from src.format_conversions import convert_all_in_folder
 from src.pipeline import Pipeline
 
         

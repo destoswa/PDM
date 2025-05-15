@@ -303,7 +303,7 @@ class TilesLoader():
                 params= [temp_seg_src, self.segmentation_results_dir],
                 verbose=verbose
                 )
-            quit()
+            # quit()
             # test
             # return_code = pack_passed[id_pack]
 

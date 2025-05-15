@@ -59,7 +59,7 @@ ENV CONDA_DEFAULT_ENV=pdm_env
 ENV CONDA_PREFIX=/opt/conda/envs/pdm_env
 ENV PATH="${CONDA_PREFIX}/bin:${PATH}"
 
-# Install dependencies inside the Conda environment
+# Install dependencies inside the Conda environment (pdm_env)
 # RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade pip \
 #     && conda run -n pdal_env python -m pip install autopep8 doc8 ipython pandas tqdm
 RUN conda run -n pdm_env python -m pip install --no-cache-dir --upgrade \
@@ -77,6 +77,25 @@ RUN conda run -n pdm_env python -m pip install --no-cache-dir --upgrade \
     setuptools==58.0.4 \
     tqdm==4.62.3 \
     wheel==0.37.0
+
+# Install dependencies inside the Conda environment (pdal_env)
+# RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade pip \
+#     && conda run -n pdal_env python -m pip install autopep8 doc8 ipython pandas tqdm
+# RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade \
+#     autopep8==1.5.7 \
+#     doc8==0.8.1 \
+#     docutils==0.17.1 \
+#     ipython==7.27.0 \
+#     ninja==1.10.2 \
+#     pandas==1.3.3 \
+#     pip==21.2.4 \
+#     poetry==1.1.8 \
+#     pylint==2.10.2 \
+#     pytest==6.2.5 \
+#     rope==0.19.0 \
+#     setuptools==58.0.4 \
+#     tqdm==4.62.3 \
+#     wheel==0.37.0
 
 # Set up GPU-related environment variables
 ENV CU_VERSION=cu111
@@ -269,6 +288,7 @@ RUN conda run -n pdm_env python -m pip install --no-cache-dir \
     jaklas \
     dask==2021.8.1 \
     pykdtree==1.3.7.post0
+
 # Set bash as the default entrypoint to ensure Conda activation
 ENTRYPOINT ["/bin/bash", "--login"]
 
