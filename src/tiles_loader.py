@@ -248,24 +248,6 @@ class TilesLoader():
         self.list_tiles = [x for x in os.listdir(self.data_dest)]
         assert len(self.list_tiles) != 0
 
-            # print("No tiles are loaded in the system!")
-            # answer = None
-            # while answer not in ['y', 'yes', 'n', 'no', '']:
-            #     answer = input("Do you want to try and load them (y/n)?")
-            #     if answer.lower() in ['y', 'yes', '']:
-            #         if len(set([x.split('.')[-1] for x in os.listdir(self.data_dest)])) > 1:
-            #             warnings.warn('It seems like the resulting folder contains files with different extensions!')
-            #         self.list_tiles = [x for x in os.listdir(self.data_dest)]
-            #         print('yes')
-            #     elif answer.lower() in ['n', 'no']:
-            #         print("Stoping the process..")
-            #         quit()
-            #     else:
-            #         print("wrong input.")
-            # if len(self.list_tiles) == 0:
-            #     print("No files in the destination folder")
-            #     quit()
-
         # creates pack of samples to infer on
         if self.pack_size > 1:
             self.list_pack_of_tiles = [self.list_tiles[x:min(y,len(self.list_tiles))] for x, y in zip(
@@ -359,6 +341,7 @@ class TilesLoader():
         with open(os.path.join(self.results_dest, 'problematic_tiles.txt'), 'w') as outfile:
             for item in self.problematic_tiles:
                 outfile.write(f"{item}\n")
+
         # printing stuff for test
         print("State of the tree_list: ", self.trimming_tree_list)
         print("Files in the list: ", len(self.list_tiles))
@@ -420,7 +403,7 @@ class TilesLoader():
             # store distribution results
             df_file_results = pd.read_csv(os.path.join(dir_target, 'results/results.csv'), sep=';')
             counts = df_file_results.groupby('class').count()
-            results_dist['tile_name'].append(file)
+            results_dist['tile_name'].append(''.join(file.split('_out')))
             for cat_num, cat_str in zip([0,1,2], ['garbage', 'multi', 'single']):
                 if cat_num in counts.index:
                     results_dist[cat_str].append(counts.loc[cat_num].values[0])
