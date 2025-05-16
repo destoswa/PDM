@@ -142,11 +142,11 @@ class Trainer:
             self._cfg.training.num_workers,
             self.precompute_multi_scale,
         )
-        if self.is_training:
-            print("============")
-            print("TRAINING DATASET")
-            print(self._dataset.train_dataset.__dict__)
-            print("============")
+        # if self.is_training:
+        #     print("============")
+        #     print("TRAINING DATASET")
+        #     print(self._dataset.train_dataset.__dict__)
+        #     print("============")
 
         # log.info(self._dataset)
 

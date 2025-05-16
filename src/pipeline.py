@@ -282,7 +282,7 @@ class Pipeline():
             )
 
         # create temp folder
-        temp_seg_src = os.path.join(os.path.join(self.root_src, self.data_src), 'temp_seg/')
+        temp_seg_src = os.path.join(self.root_src, self.data_src, 'temp_seg')
         if os.path.exists(temp_seg_src):
             shutil.rmtree(temp_seg_src)
         os.mkdir(temp_seg_src)
@@ -305,7 +305,8 @@ class Pipeline():
                 )]
             if list_pack_of_tiles[-1][-1] != self.tiles_to_process[-1]:
                 list_pack_of_tiles.append(self.tiles_to_process[(len(list_pack_of_tiles)*self.inference.num_tiles_per_inference)::])
-        
+        else:
+            list_pack_of_tiles = [[x] for x in self.tiles_to_process]
         # for _, pack in tqdm(enumerate(list_pack_of_tiles), total=len(list_pack_of_tiles), desc="Processing"):
         #     if verbose:
         #         print("===\tProcessing files: ")
@@ -319,12 +320,17 @@ class Pipeline():
                 for file in pack:
                     print("\t", file)
                 print("===")
+
+            # create / reset temp folder
+            if os.path.exists(temp_seg_src):
+                shutil.rmtree(temp_seg_src)
+            os.mkdir(temp_seg_src)
                 
             # copy files to temp folder
             for file in pack:
                 original_file_src = os.path.join(self.result_pseudo_labels_dir, self.data_src, file)
                 # original_file_src = os.path.join(self.data_dest, file)
-                temp_file_src = os.path.join(os.path.join(temp_seg_src, file))
+                temp_file_src = os.path.join(temp_seg_src, file)
                 # print(temp_file_src)
                 shutil.copyfile(original_file_src, temp_file_src)
 
@@ -348,7 +354,7 @@ class Pipeline():
                 if verbose:
                     print("Unzipping results...")
                 self.unzip_laz_files(
-                    zip_path=os.path.join(self.segmentation_results_dir, "results.zip"),
+                    zip_path=os.path.join(temp_seg_src, "results.zip"),
                     extract_to=self.preds_src,
                     delete_zip=True
                     )
@@ -416,8 +422,8 @@ class Pipeline():
         #         if verbose:
         #             print("Segmentation done!")
 
-            # removing temp file
-            os.remove(temp_file_src)
+        # removing temp file
+        os.remove(temp_file_src)
 
         # update tiles to process
         for tile in self.problematic_tiles:
@@ -751,7 +757,10 @@ class Pipeline():
                      ],
             )
 
-    def save_log(self, dest, clear_after=True):
+    def save_log(self, dest, clear_after=True, verbose=False):
+        if verbose:
+            print(f"Saving logs (of size {len(self.log)}) to : {dest}")
+            
         with open(os.path.join(dest, "log.txt"), "w") as file:
             file.write(self.log)
         if clear_after:

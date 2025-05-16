@@ -18,12 +18,10 @@ def main(cfg):
     if cfg.pretty_print:
         print(OmegaConf.to_yaml(cfg))
     setattr(cfg, 'is_training',True)
-    print("TEEEEESTTTT")
+
     trainer = Trainer(cfg)
-    # return
-    print("TEEEEESTTTT")
+
     metrics = trainer.train()
-    print("=====\nMETRICS:\n", metrics)
 
     # update metrics file
     df_metrics = pd.read_csv(cfg.train_metrics_src, sep=';')
@@ -43,14 +41,14 @@ def main(cfg):
                 else:
                     new_lines[el].append(np.nan)
             # new_lines.append(new_line)
-    print("==========")
-    print("NEW LINES\n", new_lines)
-    print("==========")
+    # print("==========")
+    # print("NEW LINES\n", new_lines)
+    # print("==========")
     df_new_lines = pd.DataFrame(new_lines)
-    print("==========")
-    print("NEW DATAFRAME")
-    print(df_new_lines)
-    print("==========")
+    # print("==========")
+    # print("NEW DATAFRAME")
+    # print(df_new_lines)
+    # print("==========")
     df_metrics = pd.concat([df_metrics, df_new_lines], axis=0)
     df_metrics.to_csv(cfg.train_metrics_src, sep=';', index=False)
 
