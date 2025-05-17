@@ -760,7 +760,9 @@ class Pipeline():
     def save_log(self, dest, clear_after=True, verbose=False):
         if verbose:
             print(f"Saving logs (of size {len(self.log)}) to : {dest}")
-            
+        
+        os.makedirs(dest, exist_ok=True)
+
         with open(os.path.join(dest, "log.txt"), "w") as file:
             file.write(self.log)
         if clear_after:

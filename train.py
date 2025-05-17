@@ -138,7 +138,7 @@ def main(cfg):
         
         # classify
         pipeline.classify(verbose=True)
-        pipeline.save_log(pipeline.result_current_loop_dir, clear_after=True)
+        pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
         # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
 
         # create pseudo-labels
@@ -149,10 +149,10 @@ def main(cfg):
 
         # train
         pipeline.prepare_data(verbose=False)
-        pipeline.train(verbose=False)
+        # pipeline.train(verbose=False)
 
         # save logs
-        pipeline.save_log(pipeline.result_current_loop_dir)
+        pipeline.save_log(pipeline.result_current_loop_dir, clear_after=True)
 
         # # saving results
         # if SAVE_PSEUDO_LABELS_PER_LOOP:
