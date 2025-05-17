@@ -222,7 +222,7 @@ class PanopticTracker(SegmentationTracker):
 
         # Test mode, compute votes in order to get full res predictions
         if self._test_area is None:
-            print("SELF._TEST_AREA IS NONE!!!")
+            # print("SELF._TEST_AREA IS NONE!!!")
             self._test_area = self._dataset.test_data  # @Treeins
             for i, test_area_i in enumerate(self._test_area):
                 if self._test_area[i].y is None:
@@ -236,27 +236,37 @@ class PanopticTracker(SegmentationTracker):
                 self._test_area[i].scores = None
                 # self._test_area[i].ori_pos = torch.zeros((self._test_area[i].pos.shape), dtype=torch.float)
                 self._test_area[i].to(model.device)
-        else:
-            print("SELF._TEST_AREA IS NOT NONE!!!")
+        # else:
+        #     print("SELF._TEST_AREA IS NOT NONE!!!")
 
         # Gather origin ids and check that it fits with the test set
-        print("DATA: ", data)
+        # print("DATA: ", data)
         inputs = data if data is not None else model.get_input()
         if inputs[SaveOriginalPosId.KEY] is None:
             raise ValueError("The inputs given to the model do not have a %s attribute." % SaveOriginalPosId.KEY)
 
         originids = inputs[SaveOriginalPosId.KEY]
-        print("\ninputs: ", inputs)
-        print("SaveOriginalPosId.Key: ", SaveOriginalPosId.KEY)
-        print("origin ids: ", originids)
-        print("len origin ids: ", len(originids))
-        print("max origin ids: ", originids.max())
-        print("number of points in the original point cloud: ", self._test_area[self.cloud_count].pos.shape[0])
-        print("self.cloud_count: ", self.cloud_count)
+        # print("\ninputs: ", inputs)
+        # print("SaveOriginalPosId.Key: ", SaveOriginalPosId.KEY)
+        # print("origin ids: ", originids)
+        # print("len origin ids: ", len(originids))
+        # print("max origin ids: ", originids.max())
+        # print("number of points in the original point cloud: ", self._test_area[self.cloud_count].pos.shape[0])
+        # print("self.cloud_count: ", self.cloud_count)
         # quit()
 
         # localoriginids = inputs[SaveLocalOriginalPosId.KEY]
         original_input_ids = self._dataset.test_data_spheres[self.block_count].origin_id
+        #------trying somethihng!! ---------
+
+        # originids = torch.Tensor([x for x in originids if x < self._test_area[self.cloud_count].pos.shape[0]])
+        # for x in originids:
+        #     if x >= self._test_area[self.cloud_count].pos.shape[0]:
+        #         originids = originids[originids != x]
+        
+        # print("origin ids: ", originids)
+
+        #---------------------------------
         if originids.dim() == 2:
             originids = originids.flatten()
         if originids.max() >= self._test_area[self.cloud_count].pos.shape[0]:

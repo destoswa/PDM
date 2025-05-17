@@ -260,8 +260,8 @@ RUN wget https://github.com/scikit-learn-contrib/hdbscan/archive/refs/tags/0.8.2
     unzip 0.8.29.zip && \
     rm 0.8.29.zip && \
     cd hdbscan-0.8.29 && \
-    python3.8 -m pip install -r requirements.txt && \
-    python3.8 setup.py install
+    conda run -n pdm_env python -m pip install -r requirements.txt && \
+    conda run -n pdm_env python setup.py install
     
 RUN conda run -n pdm_env python -m pip install --no-cache-dir \
     numba==0.57.1 \

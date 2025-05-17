@@ -315,7 +315,7 @@ class Trainer:
                         if self.profiling:
                             if i > self.num_batches:
                                 return 0
-
+            print("Starting finalize_epoch...")
             metric = self._finalize_epoch(epoch)
         return metric
             # self._tracker.print_summary()

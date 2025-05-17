@@ -109,7 +109,7 @@ def main(cfg):
 
         # segment
         # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
-        pipeline.segment(verbose=False)
+        pipeline.segment(verbose=True)
 
 
         # pipeline.problematic_tiles = ["color_grp_full_tile_4.laz", "color_grp_full_tile_7.laz", "color_grp_full_tile_12.laz", "color_grp_full_tile_10.laz"]

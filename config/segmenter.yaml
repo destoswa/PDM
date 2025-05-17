@@ -3,7 +3,7 @@ segmenter:
   inference:
     model_checkpoint_src: None
     config_eval_src: /home/pdm/models/SegmentAnyTree/conf/eval.yaml
-    num_tiles_per_inference: 1
+    num_tiles_per_inference: 10
   training:
     data_train: data/FORinstance_dataset
     config_data_src: /home/pdm/models/SegmentAnyTree/conf/data/panoptic/treeins_rad8.yaml
