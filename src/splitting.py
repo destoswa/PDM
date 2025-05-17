@@ -2,7 +2,7 @@ import os
 import numpy as np
 import laspy
 from tqdm import tqdm
-import pdal
+# import pdal
 import json
 
 
@@ -86,35 +86,35 @@ def split_instance(src_file_in, path_out="", keep_ground=False, verbose=True):
         print(f"INSTANCE SPLITTING DONE on {src_file_in}")
 
 
-def split_semantic(src, verbose=True):
-    # Define target folder:
-    dir_target = os.path.dirname(src) + '/' + src.split('/')[-1].split('.')[0] + "_split_semantic"
+# def split_semantic(src, verbose=True):
+#     # Define target folder:
+#     dir_target = os.path.dirname(src) + '/' + src.split('/')[-1].split('.')[0] + "_split_semantic"
 
-    if not os.path.exists(dir_target):
-        os.makedirs(dir_target)
+#     if not os.path.exists(dir_target):
+#         os.makedirs(dir_target)
 
-    points_segmented = laspy.read(src)
-    val_to_name = ['ground', 'tree']
+#     points_segmented = laspy.read(src)
+#     val_to_name = ['ground', 'tree']
 
-    for val, name in enumerate(val_to_name):
-        file_name = src.split('\\')[-1].split('/')[-1].split('.laz')[0] + f'_{name}.laz'
-        file_src = os.path.join(dir_target, file_name)
+#     for val, name in enumerate(val_to_name):
+#         file_name = src.split('\\')[-1].split('/')[-1].split('.laz')[0] + f'_{name}.laz'
+#         file_src = os.path.join(dir_target, file_name)
 
-        # Define the PDAL pipeline for filtering
-        pipeline_json = {
-            "pipeline": [
-                src,
-                {
-                    "type": "filters.expression",
-                    "expression": f"PredSemantic == {val}"
-                },
-                file_src
-            ]
-        }
+#         # Define the PDAL pipeline for filtering
+#         pipeline_json = {
+#             "pipeline": [
+#                 src,
+#                 {
+#                     "type": "filters.expression",
+#                     "expression": f"PredSemantic == {val}"
+#                 },
+#                 file_src
+#             ]
+#         }
 
-        # Run PDAL pipeline
-        pipeline = pdal.Pipeline(json.dumps(pipeline_json))
-        pipeline.execute()
+#         # Run PDAL pipeline
+#         pipeline = pdal.Pipeline(json.dumps(pipeline_json))
+#         pipeline.execute()
         
-    if verbose:
-        print("SEMANTIC SPLITTING DONE")
+#     if verbose:
+#         print("SEMANTIC SPLITTING DONE")

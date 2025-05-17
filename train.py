@@ -3,7 +3,6 @@ import shutil
 import numpy as np
 import pandas as pd
 from omegaconf import OmegaConf
-import pdal
 import random
 import laspy
 from tqdm import tqdm
@@ -12,7 +11,7 @@ from time import time
 # import warnings
 # warnings.filterwarnings("ignore")
 
-from src.format_conversions import convert_all_in_folder
+# from src.format_conversions import convert_all_in_folder
 from src.pipeline import Pipeline
 
         
@@ -110,6 +109,7 @@ def main(cfg):
         # segment
         # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
         pipeline.segment(verbose=True)
+        pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
 
 
         # pipeline.problematic_tiles = ["color_grp_full_tile_4.laz", "color_grp_full_tile_7.laz", "color_grp_full_tile_12.laz", "color_grp_full_tile_10.laz"]
@@ -137,7 +137,8 @@ def main(cfg):
         # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
         
         # classify
-        pipeline.classify(verbose=False)
+        pipeline.classify(verbose=True)
+        pipeline.save_log(pipeline.result_current_loop_dir, clear_after=True)
         # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
 
         # create pseudo-labels

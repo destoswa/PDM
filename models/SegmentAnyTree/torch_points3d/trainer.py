@@ -142,11 +142,11 @@ class Trainer:
             self._cfg.training.num_workers,
             self.precompute_multi_scale,
         )
-        if self.is_training:
-            print("============")
-            print("TRAINING DATASET")
-            print(self._dataset.train_dataset.__dict__)
-            print("============")
+        # if self.is_training:
+        #     print("============")
+        #     print("TRAINING DATASET")
+        #     print(self._dataset.train_dataset.__dict__)
+        #     print("============")
 
         # log.info(self._dataset)
 
@@ -240,8 +240,8 @@ class Trainer:
                 # save centers
                 data_dict = data.to_dict()
                 center = data_dict['center']
-                os.makedirs("/home/pdm/data/dataset_tiles_100m/training_samples", exist_ok=True)
-                with open(f"/home/pdm/data/dataset_tiles_100m/training_samples/epoch_{epoch}_samples_{i}.pickle", 'wb') as file:
+                os.makedirs("/home/pdm/data/dataset_pipeline/training_samples", exist_ok=True)
+                with open(f"/home/pdm/data/dataset_pipeline/training_samples/epoch_{epoch}_samples_{i}.pickle", 'wb') as file:
                     pickle.dump(center, file)
                 t_data = time.time() - iter_data_time
                 iter_start_time = time.time()
