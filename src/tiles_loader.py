@@ -27,6 +27,7 @@ if ENV == "pdal_env":
 
 class TilesLoader():
     def __init__(self, cfg):
+        self.cfg = cfg
         self.tilesloader_conf = cfg.tiles_loader
         self.segmenter_conf = cfg.segmenter
         self.classifier_conf = cfg.classifier
@@ -433,13 +434,88 @@ class TilesLoader():
     def split(self):
         pass
 
-if __name__ == "__main__":    
+    def evaluate(self, list_of_tiles_to_remove=[], verbose=True):
+        # # prepare architecture
+        # os.makedirs(os.path.join(run_src, ""), exist_ok=True)
+
+        # load csv of clusters
+        df_clusters = pd.read_csv(self.tilesloader_conf.evaluate.cluster_csv_path, sep=';')
+        number_of_clusters = sorted(df_clusters.cluster_id.unique().tolist())
+        print(df_clusters.head())
+
+        # remove tiles if necessary
+        if len(list_of_tiles_to_remove) > 0:
+            df_clusters = df_clusters.loc[~df_clusters.tile_name.isin(list_of_tiles_to_remove)]
+        lst_tiles = df_clusters.tile_name.values
+        print(df_clusters.head())
+
+        # loop on loops:
+        loops = []
+        x = 0
+        while True:
+            if str(x) in os.listdir(self.tilesloader_conf.evaluate.run_src):
+                loops.append(x)
+                x += 1
+            else:
+                break
+        if len(loops) == 0:
+            print("No loops in run folder..")
+            quit()
+        lst_tiles = lst_tiles[0:10]
+        for _, loop in tqdm(enumerate(loops), total=len(loops), desc="Evaluating"):
+            if verbose:
+                print(f"Processing loop {loop+1}/{len(loops)}")
+            # segment on tiles
+            inference_res_src = os.path.join(self.tilesloader_conf.evaluate.run_src, str(loop), 'inference')
+            os.makedirs(inference_res_src, exist_ok=True)
+            for _, tile in tqdm(enumerate(lst_tiles), total=len(lst_tiles), desc="Infering on tiles", disable=verbose==False):
+                # create architecture
+                temp_folder = os.path.join(self.tilesloader_conf.evaluate.run_src, 'temp_inf')
+                if os.path.exists(temp_folder):
+                    shutil.rmtree(temp_folder)
+                os.makedirs(temp_folder)
+                shutil.copyfile(
+                    os.path.join(self.tilesloader_conf.evaluate.cluster_src, tile),
+                    os.path.join(temp_folder, tile),
+                )
+                # segment
+                print(temp_folder)
+                print(inference_res_src)
+                return_code = self.run_subprocess(
+                    src_script=self.segmenter_conf.root_model_src,
+                    script_name="./run_oracle_pipeline.sh",
+                    params= [os.path.join(self.root_src,temp_folder), os.path.join(self.root_src, inference_res_src)],
+                    verbose=verbose
+                )
+                print(return_code)
+
+            # quit()
+            # classify on samples
+
+            # add classification results in csv
+            pass
+
+        # plot evolution per cluster 
+        pass
+
+
+
+if __name__ == "__main__":
+
+
+
+
     time_start = time.time()
     cfg_tilesloader = OmegaConf.load("config/tiles_loader.yaml")
     cfg_segmenter = OmegaConf.load("config/segmenter.yaml")
     cfg_classifier = OmegaConf.load("config/classifier.yaml")
     cfg = OmegaConf.merge(cfg_tilesloader, cfg_segmenter, cfg_classifier)
     tiles_loader = TilesLoader(cfg)
+
+    list_to_drop = ["color_grp_full_tile_568.laz", "color_grp_full_tile_504.laz"]
+
+    tiles_loader.evaluate(list_to_drop, verbose=True)
+    quit()
 
     if len(sys.argv) > 1:
 
@@ -460,6 +536,8 @@ if __name__ == "__main__":
             tiles_loader.trimming(verbose=verbose)
         elif mode == "classification":
             tiles_loader.classify(verbose=verbose)
+        elif mode == "evaluate":
+            TilesLoader.e
         else:
             pass
         quit()

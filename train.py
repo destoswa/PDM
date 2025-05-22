@@ -108,7 +108,7 @@ def main(cfg):
 
         # segment
         # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
-        pipeline.segment(verbose=True)
+        # pipeline.segment(verbose=True)
         pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
 
 
@@ -137,12 +137,13 @@ def main(cfg):
         # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
         
         # classify
-        pipeline.classify(verbose=True)
+        # pipeline.classify(verbose=True)
         pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
         # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
 
         # create pseudo-labels
         pipeline.create_pseudo_labels(verbose=False)
+        quit()
 
         # compute stats on tiles
         pipeline.stats_on_tiles()
@@ -198,9 +199,20 @@ if __name__ == "__main__":
     cfg = OmegaConf.merge(cfg_dataset, cfg_preprocess, cfg_pipeline, cfg_classifier, cfg_segmenter)
 
 
-
     # pipeline = Pipeline(cfg)
-    # pipeline.test()
+    # pipeline.result_dir = "/home/pdm/results/trainings_saved/20250517_145404_first_long_run"
+    # pipeline.current_loop = 29
+    # pipeline.result_current_loop_dir = os.path.join(pipeline.result_dir, str(pipeline.current_loop))
+    # pipeline.result_pseudo_labels_dir = os.path.join(pipeline.result_dir, 'pseudo_labels/')
+    
+    # pipeline.training_metrics_src = os.path.join(pipeline.result_dir, 'training_metrics.csv')
+    # pipeline.inference_metrics_src = os.path.join(pipeline.result_dir, 'inference_metrics.csv')
+    # inf_metric = pd.read_csv(pipeline.inference_metrics_src, sep=';')
+    # print(inf_metric.head())
+
+    # pipeline.visualization()
+    # # pipeline.test()
+    
     # quit()
 
 

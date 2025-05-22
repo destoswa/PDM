@@ -539,8 +539,8 @@ class Pipeline():
                 )
             
                 # reset values of pseudo-labels
-                new_file.treeID = np.zeros(len(new_file), dtype="f4")
                 new_file.classification = np.zeros(len(new_file), dtype="f4")
+                new_file.treeID = np.zeros(len(new_file), dtype="f4")
 
             # set ground based on semantic pred
             if self.upgrade_ground or self.current_loop == 0:
@@ -553,7 +553,8 @@ class Pipeline():
                 cluster = laspy.open(cluster_path, mode='r').read()
                 coords_B = np.stack((cluster.x, cluster.y, cluster.z), axis=1)
                 coords_B_view = coords_B.view([('', coords_B.dtype)] * 3).reshape(-1)
-                if row['class'] in [1, 2]:
+                # if row['class'] in [1, 2]:
+                if row['class'] == 2:
                     self.classified_clusters.append((coords_B_view, row['class']))
 
             # create masks on the original tile for each cluster (multiprocessing)
@@ -562,6 +563,10 @@ class Pipeline():
                 results = list(tqdm(executor.map(partialFunc, range(len(self.classified_clusters))), total=len(self.classified_clusters), smoothing=0.9, desc="Updating pseudo-label", disable=~verbose))
             
             # Update the original file based on results and update the csv file with ref to trees
+            dict_reasons_of_rejection = {x:0 for x in ['total', 'is_ground', 'same_heighest_point', 'overlapping_diameter_greater_than_4', 'i_o_new_tree_greater_than_70_per']}
+            # print(dict_reasons_of_rejection)
+            # print(pd.DataFrame(index=dict_reasons_of_rejection.keys(), data=dict_reasons_of_rejection.values()))
+            # quit()
             for id_tree, (mask, value) in tqdm(enumerate(results), total=len(results), desc='temp', disable=~verbose):
                 """
                 value to label:
@@ -574,20 +579,84 @@ class Pipeline():
                     4: tree
                 """
                 # set instance p-label
-                new_file.treeID[mask] = id_tree
+                # new_file.treeID[mask] = id_tree
+                
+                # check if new tree
+                corresponding_instances = new_file.treeID[mask]
+                # corresponding_semantic = new_file.classification[mask]
+                is_new_tree = False
+                if verbose:
+                    print("Set of overlapping instances: ", set(corresponding_instances))
+                if len(set(corresponding_instances)) == 1:
+                    is_new_tree = True
+                else:
+                    for instance in set(corresponding_instances):
+                        is_new_tree = True
+                        # if ground
+                        if instance == 0:
+                            dict_reasons_of_rejection["is_ground"] += 1
+                            is_new_tree = False
+                            # continue
+
+                        other_tree_mask = new_file.treeID == instance
+                        new_file_x = np.array(getattr(new_file, 'x'))
+                        new_file_y = np.array(getattr(new_file, 'y'))
+                        new_file_z = np.array(getattr(new_file, 'z'))
+ 
+                        # compare heighest points
+                        if np.max(new_file_z[mask]) == np.max(new_file_z[other_tree_mask]):
+                            dict_reasons_of_rejection["same_heighest_point"] += 1
+                            is_new_tree = False
+                            # continue
+                        
+                        # get intersection
+                        intersection_mask = mask & other_tree_mask
+                        intersection = np.vstack((new_file_x[intersection_mask], new_file_y[intersection_mask], new_file_z[intersection_mask]))
+
+                        # check radius of intersection
+                        range_x = np.min(intersection[0,:]) - np.max(intersection[0,:])
+                        range_y = np.min(intersection[1,:]) - np.max(intersection[1,:])
+                        range_z = np.min(intersection[2,:]) - np.max(intersection[2,:])
+                        if range_x > 4 or range_y > 4 or range_z > 4:
+                            is_new_tree = False
+                            dict_reasons_of_rejection["overlapping_diameter_greater_than_4"] += 1
+                            # continue
+
+                        # intersection over new tree
+                        if np.sum(intersection_mask) / np.sum(mask) > 0.7:
+                            is_new_tree = False
+                            dict_reasons_of_rejection["i_o_new_tree_greater_than_70_per"] += 1
+                            # continue 
+                            
+                        if is_new_tree == False:
+                            dict_reasons_of_rejection["total"] += 1
+
+                if is_new_tree == True:
+                        new_tree_id = len(set(new_file.treeID))
+                        new_file.treeID[mask] = new_tree_id
+                        new_file.classification[mask] = 4
+
+                        if verbose:
+                            print("New tree with instance: ", new_tree_id)
+
                 
                 # set semantic p-label
-                if value == 1 or (self.garbage_as_grey and value == 0):
-                    new_file.classification[mask] = 0
-                elif value == 0 and not self.garbage_as_grey:
-                    new_file.classification[mask] = 1
-                elif value == 2:
-                    new_file.classification[mask] = 4
-                else:
-                    raise ValueError("Problem in the setting of the semantic pseudo-labels!")
+                
+                # test if 
+
+
+                # if value == 1 or (self.garbage_as_grey and value == 0):
+                #     new_file.classification[mask] = 0
+                # elif value == 0 and not self.garbage_as_grey:
+                #     new_file.classification[mask] = 1
+                # elif value == 2:
+                #     new_file.classification[mask] = 4
+                # else:
+                #     raise ValueError("Problem in the setting of the semantic pseudo-labels!")
                 
             # saving back original file and also to corresponding loop if flag set to
             new_file.write(original_file_src)
+            pd.DataFrame(index=dict_reasons_of_rejection.keys(), data=dict_reasons_of_rejection.values(), columns=['count']).to_csv(os.path.join(self.result_current_loop_dir, 'pseudo_labels_reasons_of_reject.csv'), sep=';')
             if self.save_pseudo_labels_per_loop:
                 os.makedirs(os.path.join(self.result_current_loop_dir, "pseudo_labels"), exist_ok=True)
                 loop_file_src = os.path.join(self.result_current_loop_dir, "pseudo_labels", os.path.basename(original_file_src))
@@ -699,6 +768,7 @@ class Pipeline():
         
         # creates location
         location_src = os.path.join(self.result_dir, "images")
+        os.makedirs(location_src, exist_ok=True)
         
         show_global_metrics(
             src_data=self.training_metrics_src,
@@ -769,6 +839,12 @@ class Pipeline():
             self.log = ""
 
 if __name__ == "__main__":
+    # a = [1, 2, 3]
+    # b = [4, 5, 6]
+    # c = np.vstack((a,b))
+    # print(c.shape)
+    # quit()
+
     from time import time
     import torch
 

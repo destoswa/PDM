@@ -83,20 +83,22 @@ def show_global_metrics(src_data, exclude_columns = ['num_loop', 'num_epoch', 's
 
 def show_inference_counts(data_src, src_location=None, show_figure=True, save_figure=False):
     df_data = pd.read_csv(data_src, sep=';')
+    print("DATA:\n", df_data.head())
     sums = df_data[["num_loop", "num_predictions", "num_garbage", "num_multi", "num_single"]].groupby('num_loop').sum()
     fractions = sums[["num_garbage", "num_multi", "num_single"]].div(sums["num_predictions"], axis=0)
     num_problematic = df_data[['num_loop', 'is_problematic']].groupby('num_loop').sum()
+    print(num_problematic)
     num_empty = df_data[['num_loop', 'is_empty']].groupby('num_loop').sum()
     fig, axs = plt.subplots(2,2, figsize=(12,12))
     sns.lineplot(data=sums, ax=axs[0,0])
     sns.lineplot(data=fractions, ax=axs[0,1])
-    sns.barplot(data=num_problematic, x="num_loop", y='is_problematic', ax=axs[1,0])
-    sns.barplot(data=num_empty, x="num_loop", y='is_empty', ax=axs[1,1])
+    # sns.barplot(data=num_problematic, x="num_loop", y='is_problematic', ax=axs[1,0])
+    # sns.barplot(data=num_empty, x="num_loop", y='is_empty', ax=axs[1,1])
     # sns.lineplot(data=num_empty, ax=axs[1,1])
     axs[0,0].set_title('Count of the differente types of predictions')
     axs[0,1].set_title('Fraction over number of predictions')
-    axs[1,0].set_title('Number of problematic samples')
-    axs[1,1].set_title('Number of empty samples')
+    # axs[1,0].set_title('Number of problematic samples')
+    # axs[1,1].set_title('Number of empty samples')
 
     plt.tight_layout()
     if save_figure and src_location != None:
