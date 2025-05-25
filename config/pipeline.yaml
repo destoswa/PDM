@@ -2,7 +2,7 @@ pipeline:
   root_src: /home/pdm
   results_root_src: results/trainings
   result_src_name_suffixe: first_long_run
-  num_loops: 30
+  num_loops: 10
   train_frac: 0.7
   val_frac: 0.15
   test_frac: 0.15

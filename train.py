@@ -108,7 +108,7 @@ def main(cfg):
 
         # segment
         # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
-        # pipeline.segment(verbose=True)
+        pipeline.segment(verbose=False)
         pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
 
 
@@ -137,20 +137,19 @@ def main(cfg):
         # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
         
         # classify
-        # pipeline.classify(verbose=True)
+        pipeline.classify(verbose=False)
         pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
         # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
 
         # create pseudo-labels
         pipeline.create_pseudo_labels(verbose=False)
-        quit()
 
         # compute stats on tiles
         pipeline.stats_on_tiles()
 
         # train
         pipeline.prepare_data(verbose=False)
-        # pipeline.train(verbose=False)
+        pipeline.train(verbose=False)
 
         # save logs
         pipeline.save_log(pipeline.result_current_loop_dir, clear_after=True)

@@ -1,11 +1,11 @@
 defaults:
 - visualization: eval
 num_workers: 0
-batch_size: 8
+batch_size: 1
 cuda: 0
 weight_name: latest
 enable_cudnn: true
-checkpoint_dir: /home/pdm/models/SegmentAnyTree/model_file
+checkpoint_dir: /home/pdm/results/trainings/20250523_211714_first_long_run/8
 model_name: PointGroup-PAPER
 precompute_multi_scale: true
 enable_dropout: false
