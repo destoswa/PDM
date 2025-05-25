@@ -593,7 +593,15 @@ class Pipeline():
                 
                 if len(set(corresponding_instances)) == 1 and corresponding_instances[0] == 0:
                     is_new_tree = True
+                    
+                    if verbose:
+                        print(f"Adding treeID {id_new_tree} because only grey and ground: ")
+                        self.log += f"Adding treeID {id_new_tree} because only grey and ground: \n"
                 else:
+                    if verbose:
+                        print(f"Comparing to existing values")
+                        self.log += f"Comparing to existing values \n"
+
                     for instance in set(corresponding_instances):
                         is_new_tree = True
                         # if ground
@@ -616,6 +624,9 @@ class Pipeline():
                         # get intersection
                         intersection_mask = mask & other_tree_mask
                         intersection = np.vstack((new_file_x[intersection_mask], new_file_y[intersection_mask], new_file_z[intersection_mask]))
+                    if verbose:
+                        print(f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)}")
+                        self.log += f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)} \n"
 
                         # check radius of intersection
                         range_x = np.min(intersection[0,:]) - np.max(intersection[0,:])
