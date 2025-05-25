@@ -496,6 +496,7 @@ class Pipeline():
             
     def create_pseudo_labels(self, verbose=False):
         print("Creating pseudo labels:")
+        self.log += "Creating pseudo labels:\n"
         list_folders = [x for x in os.listdir(self.preds_src) if os.path.abspath(os.path.join(self.preds_src, x)) and x.endswith('instance')]
         for _, child in tqdm(enumerate(list_folders), total=len(list_folders), desc='Processing'):
             if verbose:
@@ -567,6 +568,7 @@ class Pipeline():
             # print(dict_reasons_of_rejection)
             # print(pd.DataFrame(index=dict_reasons_of_rejection.keys(), data=dict_reasons_of_rejection.values()))
             # quit()
+            id_new_tree = len(set(original_file.treeID))
             for id_tree, (mask, value) in tqdm(enumerate(results), total=len(results), desc='temp', disable=~verbose):
                 """
                 value to label:
@@ -587,7 +589,9 @@ class Pipeline():
                 is_new_tree = False
                 if verbose:
                     print("Set of overlapping instances: ", set(corresponding_instances))
-                if len(set(corresponding_instances)) == 1:
+                    self.log += f"Set of overlapping instances: {set(corresponding_instances)}\n"
+                
+                if len(set(corresponding_instances)) == 1 and corresponding_instances[0] == 0:
                     is_new_tree = True
                 else:
                     for instance in set(corresponding_instances):
@@ -632,12 +636,13 @@ class Pipeline():
                             dict_reasons_of_rejection["total"] += 1
 
                 if is_new_tree == True:
-                        new_tree_id = len(set(new_file.treeID))
-                        new_file.treeID[mask] = new_tree_id
+                        new_file.treeID[mask] = id_new_tree
+                        id_new_tree += 1
                         new_file.classification[mask] = 4
 
                         if verbose:
-                            print("New tree with instance: ", new_tree_id)
+                            print("New tree with instance: ", id_new_tree)
+                            self.log += f"New tree with instance: {id_new_tree} \n"
 
                 
                 # set semantic p-label
