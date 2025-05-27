@@ -45,6 +45,7 @@ class Pipeline():
         self.upgrade_ground = cfg.pipeline.processes.upgrade_ground
         self.garbage_as_grey = cfg.pipeline.processes.garbage_as_grey
         self.save_pseudo_labels_per_loop = cfg.pipeline.processes.save_pseudo_labels_per_loop
+        self.do_continue_from_existing = cfg.pipeline.preload.do_continue_from_existing
         self.log = ""
 
         # config regarding inference
@@ -67,23 +68,28 @@ class Pipeline():
         self.result_src_name_suffixe = cfg.pipeline.result_src_name_suffixe
         self.result_src_name = datetime.now().strftime(r"%Y%m%d_%H%M%S_") + self.result_src_name_suffixe
         # self.training.result_src_name = "20250417_133119_test"
+        # self.result_pseudo_labels_dir = f'results/trainings/{self.result_src_name}/pseudo_labels/'
+
+        if self.do_continue_from_existing:
+            self.result_dir = cfg.pipeline.preload.src_existing
+            self.result_src_name = os.path.basename(self.result_dir)
+            # find loop
+            num_loop = 0
+            while str(num_loop) in os.listdir(self.result_dir):
+                num_loop += 1
+            if num_loop == 0:
+                raise ValueError("There is no existing loops in the project you are trying to start from!!")
+            else:
+                self.current_loop = num_loop
+                
+        #   _create result dirs if necessary
         self.result_dir = os.path.join(self.root_src, self.results_root_src, self.result_src_name)
         self.result_current_loop_dir = os.path.join(self.result_dir, str(self.current_loop))
         self.result_pseudo_labels_dir = os.path.join(self.result_dir, 'pseudo_labels/')
-        # self.result_pseudo_labels_dir = f'results/trainings/{self.result_src_name}/pseudo_labels/'
 
-        #   _create result dirs
         os.makedirs(self.result_dir, exist_ok=True)
-        os.makedirs(self.result_current_loop_dir, exist_ok=True)
         os.makedirs(self.result_pseudo_labels_dir, exist_ok=True)
-
-        #   _copy files
-        print("Copying files")
-        for _, file in tqdm(enumerate(self.tiles_to_process), total=len(self.tiles_to_process), desc="Process"):
-            shutil.copyfile(
-                os.path.join(self.data_src, file),
-                os.path.join(self.result_pseudo_labels_dir, file)
-            )
+        os.makedirs(self.result_current_loop_dir, exist_ok=True)
 
         # config regarding metrics
         #   _ training metrics
@@ -96,7 +102,6 @@ class Pipeline():
             ]
         self.training_metrics = pd.DataFrame(columns=training_metrics_columns)
         self.training_metrics_src = os.path.join(self.result_dir, 'training_metrics.csv')
-        self.training_metrics.to_csv(self.training_metrics_src, sep=';', index=False)
 
         #   _ inference metrics
         inference_metrics_columns = [
@@ -106,7 +111,18 @@ class Pipeline():
             ]
         self.inference_metrics = pd.DataFrame(columns=inference_metrics_columns)
         self.inference_metrics_src = os.path.join(self.result_dir, 'inference_metrics.csv')
-        self.inference_metrics.to_csv(self.inference_metrics_src, sep=';', index=False)
+
+        if not self.do_continue_from_existing:
+            #   _copy files
+            print("Copying files")
+            for _, file in tqdm(enumerate(self.tiles_to_process), total=len(self.tiles_to_process), desc="Process"):
+                shutil.copyfile(
+                    os.path.join(self.data_src, file),
+                    os.path.join(self.result_pseudo_labels_dir, file)
+                )
+                
+            self.training_metrics.to_csv(self.training_metrics_src, sep=';', index=False)
+            self.inference_metrics.to_csv(self.inference_metrics_src, sep=';', index=False)
 
     @staticmethod
     def unzip_laz_files(zip_path, extract_to=".", delete_zip=True):
@@ -528,9 +544,9 @@ class Pipeline():
             coords_A = np.stack((original_file.x, original_file.y, original_file.z), axis=1)
             coords_original_file_view = coords_A.view([('', coords_A.dtype)] * 3).reshape(-1)
 
-            # add pseudo-labels attribute if non-existant
-            #   _add instance
-            if 'treeID' not in list(original_file.point_format.dimension_names):
+            # initialisation if first loop
+            if self.current_loop == 0:
+                # add pseudo-labels attribute if non-existant
                 new_file.add_extra_dim(
                     laspy.ExtraBytesParams(
                         name='treeID',
@@ -624,9 +640,9 @@ class Pipeline():
                         # get intersection
                         intersection_mask = mask & other_tree_mask
                         intersection = np.vstack((new_file_x[intersection_mask], new_file_y[intersection_mask], new_file_z[intersection_mask]))
-                    if verbose:
-                        print(f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)}")
-                        self.log += f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)} \n"
+                        if verbose:
+                            print(f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)}")
+                            self.log += f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)} \n"
 
                         # check radius of intersection
                         range_x = np.min(intersection[0,:]) - np.max(intersection[0,:])
