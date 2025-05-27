@@ -481,7 +481,6 @@ class Pipeline():
             
             # convert predictions to laz
             # convert_all_in_folder(src_folder_in=output_folder, src_folder_out=output_folder, in_type='pcd', out_type='laz')
-            print(output_folder)
             self.run_subprocess(
                 src_script='/home/pdm',
                 script_name="run_format_conversion.sh",
@@ -568,7 +567,7 @@ class Pipeline():
             # print(dict_reasons_of_rejection)
             # print(pd.DataFrame(index=dict_reasons_of_rejection.keys(), data=dict_reasons_of_rejection.values()))
             # quit()
-            id_new_tree = len(set(original_file.treeID))
+            id_new_tree = len(set(new_file.treeID))
             for id_tree, (mask, value) in tqdm(enumerate(results), total=len(results), desc='temp', disable=~verbose):
                 """
                 value to label:
@@ -602,13 +601,13 @@ class Pipeline():
                         print(f"Comparing to existing values")
                         self.log += f"Comparing to existing values \n"
 
+                    is_new_tree = True
                     for instance in set(corresponding_instances):
-                        is_new_tree = True
                         # if ground
                         if instance == 0:
                             dict_reasons_of_rejection["is_ground"] += 1
                             is_new_tree = False
-                            # continue
+                            # break
 
                         other_tree_mask = new_file.treeID == instance
                         new_file_x = np.array(getattr(new_file, 'x'))
@@ -619,14 +618,14 @@ class Pipeline():
                         if np.max(new_file_z[mask]) == np.max(new_file_z[other_tree_mask]):
                             dict_reasons_of_rejection["same_heighest_point"] += 1
                             is_new_tree = False
-                            # continue
+                            # break
                         
                         # get intersection
                         intersection_mask = mask & other_tree_mask
                         intersection = np.vstack((new_file_x[intersection_mask], new_file_y[intersection_mask], new_file_z[intersection_mask]))
-                    if verbose:
-                        print(f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)}")
-                        self.log += f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)} \n"
+                        if verbose:
+                            print(f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)}")
+                            self.log += f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)} \n"
 
                         # check radius of intersection
                         range_x = np.min(intersection[0,:]) - np.max(intersection[0,:])
@@ -635,25 +634,25 @@ class Pipeline():
                         if range_x > 4 or range_y > 4 or range_z > 4:
                             is_new_tree = False
                             dict_reasons_of_rejection["overlapping_diameter_greater_than_4"] += 1
-                            # continue
+                            # break
 
                         # intersection over new tree
                         if np.sum(intersection_mask) / np.sum(mask) > 0.7:
                             is_new_tree = False
                             dict_reasons_of_rejection["i_o_new_tree_greater_than_70_per"] += 1
-                            # continue 
+                            # break 
                             
                         if is_new_tree == False:
                             dict_reasons_of_rejection["total"] += 1
 
                 if is_new_tree == True:
-                        new_file.treeID[mask] = id_new_tree
-                        id_new_tree += 1
-                        new_file.classification[mask] = 4
+                    new_file.treeID[mask] = id_new_tree
+                    id_new_tree += 1
+                    new_file.classification[mask] = 4
 
-                        if verbose:
-                            print("New tree with instance: ", id_new_tree)
-                            self.log += f"New tree with instance: {id_new_tree} \n"
+                    if verbose:
+                        print("New tree with instance: ", id_new_tree)
+                        self.log += f"New tree with instance: {id_new_tree} \n"
 
                 
                 # set semantic p-label

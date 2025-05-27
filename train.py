@@ -168,15 +168,15 @@ def main(cfg):
         sec = int(delta_time_loop - 3600 * hours - 60 * min)
         print(f"==== Loop done in {hours}:{min}:{sec}====")
 
-    # save states info
-    pipeline.inference_metrics.to_csv(
-        os.path.join(
-            ROOT_SRC, 
-            pipeline.result_dir,
-            "inference_metrics.csv"),
-        sep=';',
-        index=False,
-    )
+        # save states info
+        pipeline.inference_metrics.to_csv(
+            os.path.join(
+                ROOT_SRC, 
+                pipeline.result_dir,
+                "inference_metrics.csv"),
+            sep=';',
+            index=False,
+        )
 
     # show metrics
     pipeline.visualization()

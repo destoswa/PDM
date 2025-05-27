@@ -5,7 +5,7 @@ batch_size: 1
 cuda: 0
 weight_name: latest
 enable_cudnn: true
-checkpoint_dir: /home/pdm/results/trainings/20250523_211714_first_long_run/8
+checkpoint_dir: /home/pdm/results/trainings/20250527_095351_first_long_run/0
 model_name: PointGroup-PAPER
 precompute_multi_scale: true
 enable_dropout: false
