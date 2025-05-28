@@ -20,9 +20,7 @@ ENV = os.environ['CONDA_DEFAULT_ENV']
 if ENV == "pdal_env":
     import pdal
     from src.splitting import split_instance
-    from src.format_conversions import convert_all_in_folder
-
-    
+    from src.format_conversions import convert_all_in_folder 
 
 
 class TilesLoader():
@@ -157,8 +155,61 @@ class TilesLoader():
                     target.write(source.read())
         if delete_zip:
             os.remove(zip_path)
+    
+    @staticmethod
+    def remove_hanging_points(src_laz_in, src_laz_out, voxel_size=2, threshold=5):
+        # voxelize the tile
+        laz_in = laspy.read(src_laz_in)
+        points = np.array(laz_in.xyz)
+        voxel_size = 2
+        voxel_indices = np.floor(points / voxel_size).astype(np.int32)
+        min = np.min(points, axis=0)
+        max = np.max(points, axis=0)
 
-    #   _static methods used by the preprocess
+        voxel_indices = []
+        voxel_indices.append(np.arange(min[0], max[0] + voxel_size, voxel_size))
+        voxel_indices.append(np.arange(min[1], max[1] + voxel_size, voxel_size))
+        voxel_indices.append(np.arange(min[2], max[2] + voxel_size, voxel_size))
+
+        container = {x:{y:{z:[] for z in range(len(voxel_indices[2]))} for y in range(len(voxel_indices[1]))} for x in range(len(voxel_indices[0]))}
+        points_pos_in_container = []
+        print(container)
+        for _, point_id in tqdm(enumerate(range(points.shape[0])), total = points.shape[0]):
+            full_pos = [0,0,0]
+            for ax in range(3):
+                for pos in range(len(voxel_indices[ax])):
+                    if points[point_id, ax] > voxel_indices[ax][pos] and points[point_id, ax] < voxel_indices[ax][pos+1]:
+                        full_pos[ax] = pos
+                        break
+
+            container[full_pos[0]][full_pos[1]][full_pos[2]].append(points[point_id])
+            points_pos_in_container.append(full_pos)
+
+        # find the isolated points
+        isolated_points = []
+        for _, point_id in tqdm(enumerate(range(points.shape[0])), total = points.shape[0]):
+            num_neighboors = 0
+            pos = points_pos_in_container[point_id]
+            for dx in range(-1, 2):
+                for dy in range(-1, 2):
+                    for dz in range(-1, 2):
+                        x = np.max([pos[0] + dx, 0])
+                        y = np.max([pos[1] + dy, 0])
+                        z = np.max([pos[2] + dz, 0])
+                        num_neighboors += len(container[x][y][z])
+            if num_neighboors < threshold:
+                isolated_points.append(point_id)
+
+        # create mask
+        src_sample = r"D:\PDM_repo\Github\PDM\data\full_dataset\selection\clusters_4\cluster_2\color_grp_full_tile_586.laz"
+        new_file_src = os.path.basename(src_sample).split('.laz')[0] + 'voxel_size_2_isolated_th_5.laz'
+        new_laz_src = os.path.join(os.path.dirname(src_sample), new_file_src)
+        laz_in = laspy.read(new_laz_src)
+        mask_isolated = laz_in.isolated == 0
+
+        # remove points based on mask
+        laz_in.points = laz_in.points[mask_isolated]
+        laz_in.write(src_laz_out)
 
     # ===================================
     # === METHODS OF THE TILES LOADER ===
@@ -353,7 +404,19 @@ class TilesLoader():
             self.trimming(verbose=verbose)
 
     def preprocess(self):
-        pass
+        # security
+        self.list_tiles = [x for x in os.listdir(self.data_dest)]
+        assert len(self.list_tiles) != 0
+
+        # remove hanging points
+        if self.tilesloader_conf.preprocess.do_remove_hanging_points:
+            for tile in self.list_tiles:
+                TilesLoader.remove_hanging_points(
+                    src_laz_in=os.path.join(self.data_dest, tile),
+                    src_laz_out=os.path.join(self.data_dest, tile),
+                    voxel_size=2,
+                    threshold=5,
+                )
 
     def classify(self, verbose=True):
         # create folder for classification results
@@ -417,22 +480,6 @@ class TilesLoader():
             sep=';',
             index=False,
         )
-            # for file in os.listdir(output_folder):
-            #     if file.endswith('.pcd'):
-            #         os.remove(os.path.join(output_folder, file))
-
-    # ===============================================
-    # ======== for the future if enough time ========
-    # ===============================================
-
-    def make_stats(self):
-        pass
-
-    def filter(self):
-        pass
-
-    def split(self):
-        pass
 
     def evaluate(self, list_of_tiles_to_remove=[], verbose=True):
         # # prepare architecture
@@ -501,10 +548,6 @@ class TilesLoader():
 
 
 if __name__ == "__main__":
-
-
-
-
     time_start = time.time()
     cfg_tilesloader = OmegaConf.load("config/tiles_loader.yaml")
     cfg_segmenter = OmegaConf.load("config/segmenter.yaml")

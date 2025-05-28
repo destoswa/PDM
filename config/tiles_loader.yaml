@@ -4,6 +4,7 @@ tiles_loader:
   results_destination: data/full_dataset/all_tiles/
   tiles_destination: ${tiles_loader.results_destination}/dataset_full_${tiles_loader.tiling.tile_size}m
   preprocess:
+    do_remove_hanging_points: True
     do_flatten: True
     do_remove_duplicates: True
   tiling:
