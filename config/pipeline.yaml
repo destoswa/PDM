@@ -12,4 +12,4 @@ pipeline:
     save_pseudo_labels_per_loop: True
   preload:
     do_continue_from_existing: True
-    src_existing: /home/pdm/results/trainings/20250523_154913_first_long_run
+    src_existing: /home/pdm/results/trainings/20250527_095351_first_long_run
