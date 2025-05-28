@@ -66,9 +66,9 @@ def main(cfg):
 
     # create pipeline
     pipeline = Pipeline(cfg) 
-    
+
     # start looping
-    for loop in range(NUM_LOOPS):
+    for loop in range(pipeline.current_loop, NUM_LOOPS):
         print(f"===== LOOP {loop + 1} / {NUM_LOOPS} =====")
         time_start_loop = time()
         pipeline.current_loop = loop
