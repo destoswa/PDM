@@ -1,7 +1,7 @@
 segmenter:
   root_model_src: /home/pdm/models/SegmentAnyTree
   inference:
-    model_checkpoint_src: None
+    # model_checkpoint_src: None
     config_eval_src: /home/pdm/models/SegmentAnyTree/conf/eval.yaml
     num_tiles_per_inference: 1
   training:

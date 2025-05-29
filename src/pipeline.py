@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_compl
 from functools import partial
 from omegaconf import OmegaConf
 from scipy.spatial import cKDTree
+from sklearn.decomposition import PCA
 if __name__ == "__main__":
     sys.path.append(os.getcwd())
 from src.format_conversions import convert_all_in_folder
@@ -61,7 +62,7 @@ class Pipeline():
 
         # config regarding training
         self.training = cfg.segmenter.training
-        self.model_checkpoint_src = cfg.segmenter.inference.model_checkpoint_src
+        self.model_checkpoint_src = None
         self.current_epoch = 0
 
         # config regarding results
@@ -86,6 +87,10 @@ class Pipeline():
         self.result_dir = os.path.join(self.root_src, self.results_root_src, self.result_src_name)
         self.result_current_loop_dir = os.path.join(self.result_dir, str(self.current_loop))
         self.result_pseudo_labels_dir = os.path.join(self.result_dir, 'pseudo_labels/')
+
+        # update model to use if starting from existing pipeline
+        if self.do_continue_from_existing:
+            self.model_checkpoint_src = self.result_current_loop_dir
 
         os.makedirs(self.result_dir, exist_ok=True)
         os.makedirs(self.result_pseudo_labels_dir, exist_ok=True)
@@ -140,54 +145,6 @@ class Pipeline():
                     target.write(source.read())
         if delete_zip:
             os.remove(zip_path)
-
-    # @staticmethod
-    def run_subprocess(self, src_script, script_name, add_to_log=True, params=None, verbose=True):
-        # go at the root of the segmenter
-        old_current_dir = os.getcwd()
-        os.chdir(src_script)
-
-        # add title to log
-        if add_to_log:
-            self.log += f"\n========\nSCRIPT: {script_name}\n========\n"
-
-        # construct command and run subprocess
-        # script_str = script_name
-        script_str = ['bash', script_name]
-        if params:
-            for x in params:
-                script_str.append(str(x))
-            # script_str += ' ' + ' '.join([str(x) for x in params])
-        process = subprocess.Popen(
-            script_str,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            shell=False,
-            encoding='utf-8',
-            errors='replace'
-        )
-
-        while True:
-            realtime_output = process.stdout.readline()
-
-            if realtime_output == '' and process.poll() is not None:
-                break
-
-            if realtime_output and verbose:
-                print(realtime_output.strip(), flush=True)
-            if add_to_log:
-                self.log += realtime_output.strip() + "\n"
-
-        # Ensure the process has fully exited
-        process.wait()
-        if verbose:
-            print(f"[INFO] Process completed with exit code {process.returncode}")
-
-        # go back to original working dir
-        os.chdir(old_current_dir)
-
-        # return exit code
-        return process.returncode
 
     @staticmethod
     def change_var_val_yaml(src_yaml, var, val):
@@ -264,6 +221,120 @@ class Pipeline():
 
         return laz2  # Now sorted to match laz1
 
+    @staticmethod
+    def transform_with_pca(pointcloud, verbose=False):
+        # fit PCA
+        pca = PCA(n_components=2)
+
+        # compute pointcloud in new axes
+        transformed = pca.fit_transform(pointcloud)
+
+        # principal axes
+        components = pca.components_  
+        if verbose:
+            print("PCA components (axes):\n", components)
+            print("PCA-transformed points:\n", transformed)
+        
+        return transformed
+    
+    @staticmethod
+    def split_instances(pointcloud, maskA, maskB):
+        intersection_mask = maskA & maskB
+        pc_x = np.reshape(np.array(getattr(pointcloud, 'x')), (-1,1))
+        pc_y = np.reshape(np.array(getattr(pointcloud, 'y')), (-1,1))
+
+        pc_A = np.concatenate((pc_x[maskA], pc_y[maskA]), axis=1)
+        pc_B = np.concatenate((pc_x[maskB], pc_y[maskB]), axis=1)
+
+        intersection = np.concatenate((pc_x[intersection_mask], pc_y[intersection_mask]), axis=1)        
+        # print("pcx shape: ", pc_x.shape)
+        # print("pcy shape: ", pc_y.shape)
+        # print("pcA shape: ", pc_A.shape)
+        # print("pcB shape: ", pc_B.shape)
+        # print("intersection shape: ", intersection.shape)
+        intersection_transformed = Pipeline.transform_with_pca(intersection)
+        
+
+        # cut
+        mask_pos = intersection_transformed[:,1] > 0
+        mask_pos_full = np.zeros((len(intersection_mask)))
+        small_pos = 0
+        for i in range(len(intersection_mask)):
+            if intersection_mask[i]:
+                mask_pos_full[i] = mask_pos[small_pos]
+                small_pos += 1
+        mask_neg_full = mask_pos_full == False
+        # mask_neg = mask_pos == False
+        # print("mask_pos shape: ", mask_pos.shape)
+        # print("mask_neg shape: ", mask_neg.shape)
+        # print("mask_pos_full shape: ", mask_pos_full.shape)
+        # print("mask_neg_full shape: ", mask_neg_full.shape)
+
+        # find centroids of the two clusters:
+        centroid_A = np.mean(pc_A, axis=0)
+        centroid_B = np.mean(pc_B, axis=0)
+
+        centroid_pos = np.mean(intersection[mask_pos], axis=0)
+
+        dist_pos_A = ((centroid_A[0] - centroid_pos[0])**2 + (centroid_A[1] - centroid_pos[1])**2)**0.5
+        dist_pos_B = ((centroid_B[0] - centroid_pos[0])**2 + (centroid_B[1] - centroid_pos[1])**2)**0.5
+
+        if dist_pos_A < dist_pos_B:
+            maskA = (maskA.astype(bool) | mask_pos_full.astype(bool))
+            maskB = (maskB.astype(bool) | mask_neg_full.astype(bool))
+        else:
+            maskA = (maskA.astype(bool) | mask_neg_full.astype(bool))
+            maskB = (maskB.astype(bool) | mask_pos_full.astype(bool))
+        
+        return maskA, maskB
+
+    def run_subprocess(self, src_script, script_name, add_to_log=True, params=None, verbose=True):
+        # go at the root of the segmenter
+        old_current_dir = os.getcwd()
+        os.chdir(src_script)
+
+        # add title to log
+        if add_to_log:
+            self.log += f"\n========\nSCRIPT: {script_name}\n========\n"
+
+        # construct command and run subprocess
+        # script_str = script_name
+        script_str = ['bash', script_name]
+        if params:
+            for x in params:
+                script_str.append(str(x))
+            # script_str += ' ' + ' '.join([str(x) for x in params])
+        process = subprocess.Popen(
+            script_str,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            shell=False,
+            encoding='utf-8',
+            errors='replace'
+        )
+
+        while True:
+            realtime_output = process.stdout.readline()
+
+            if realtime_output == '' and process.poll() is not None:
+                break
+
+            if realtime_output and verbose:
+                print(realtime_output.strip(), flush=True)
+            if add_to_log:
+                self.log += realtime_output.strip() + "\n"
+
+        # Ensure the process has fully exited
+        process.wait()
+        if verbose:
+            print(f"[INFO] Process completed with exit code {process.returncode}")
+
+        # go back to original working dir
+        os.chdir(old_current_dir)
+
+        # return exit code
+        return process.returncode
+
     def preprocess(self, verbose=True):
         # remove duplicates
         for tile in self.tiles_to_process:
@@ -284,7 +355,7 @@ class Pipeline():
             os.mkdir(self.preds_src)
 
         # select checkpoint
-        if self.model_checkpoint_src == "None":
+        if self.model_checkpoint_src == None:
             Pipeline.change_var_val_yaml(
                 src_yaml=self.inference.config_eval_src,
                 var="checkpoint_dir",
@@ -662,9 +733,24 @@ class Pipeline():
                             dict_reasons_of_rejection["total"] += 1
 
                 if is_new_tree == True:
-                    new_file.treeID[mask] = id_new_tree
-                    id_new_tree += 1
+                    # update classification
                     new_file.classification[mask] = 4
+
+                    # update instances
+                    if verbose:
+                        print("Length of corresponding instances: ", len(set(corresponding_instances)))
+                    if len(set(corresponding_instances)) > 1:
+                        for instance in set(corresponding_instances):
+                            if instance == 0:
+                                continue
+                            other_tree_mask = new_file.treeID == instance
+                            mask, new_other_tree_mask = Pipeline.split_instances(new_file, mask, other_tree_mask)
+                        
+                            # test if trees are still recognisable
+                            # later...
+
+                        new_file.treeID[mask] = id_new_tree
+                        id_new_tree += 1
 
                     if verbose:
                         print("New tree with instance: ", id_new_tree)
@@ -776,7 +862,7 @@ class Pipeline():
         )
 
         # run training script
-        model_checkpoint = self.model_checkpoint_src if self.model_checkpoint_src != "None" else "/home/pdm/models/SegmentAnyTree/model_file"
+        model_checkpoint = self.model_checkpoint_src if self.model_checkpoint_src != None else "/home/pdm/models/SegmentAnyTree/model_file"
         self.run_subprocess(
             src_script="/home/pdm/models/SegmentAnyTree/",
             script_name="./run_pipeline.sh",
@@ -870,6 +956,10 @@ class Pipeline():
             self.log = ""
 
 if __name__ == "__main__":
+
+
+
+
     # a = [1, 2, 3]
     # b = [4, 5, 6]
     # c = np.vstack((a,b))
