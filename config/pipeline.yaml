@@ -1,7 +1,7 @@
 pipeline:
   root_src: /home/pdm
   results_root_src: results/trainings
-  result_src_name_suffixe: first_long_run
+  result_src_name_suffixe: with_instance_splitting
   num_loops: 10
   train_frac: 0.7
   val_frac: 0.15
@@ -11,5 +11,5 @@ pipeline:
     garbage_as_grey: True
     save_pseudo_labels_per_loop: True
   preload:
-    do_continue_from_existing: True
+    do_continue_from_existing: False
     src_existing: /home/pdm/results/trainings/20250527_095351_first_long_run
