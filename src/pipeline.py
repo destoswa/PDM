@@ -90,7 +90,7 @@ class Pipeline():
 
         # update model to use if starting from existing pipeline
         if self.do_continue_from_existing:
-            self.model_checkpoint_src = self.result_current_loop_dir
+            self.model_checkpoint_src = os.path.join(self.result_dir, str(self.current_loop - 1))
 
         os.makedirs(self.result_dir, exist_ok=True)
         os.makedirs(self.result_pseudo_labels_dir, exist_ok=True)
@@ -741,10 +741,13 @@ class Pipeline():
                         print("Length of corresponding instances: ", len(set(corresponding_instances)))
                     if len(set(corresponding_instances)) > 1:
                         for instance in set(corresponding_instances):
-                            if instance == 0:
+                            if instance == 0 or len:
                                 continue
                             other_tree_mask = new_file.treeID == instance
-                            mask, new_other_tree_mask = Pipeline.split_instances(new_file, mask, other_tree_mask)
+                            intersection_mask = mask & other_tree_mask
+
+                            if len(intersection_mask) > 1:
+                                mask, new_other_tree_mask = Pipeline.split_instances(new_file, mask, other_tree_mask)
                         
                             # test if trees are still recognisable
                             # later...

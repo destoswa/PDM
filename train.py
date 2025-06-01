@@ -143,7 +143,7 @@ def main(cfg):
 
         # create pseudo-labels
         pipeline.create_pseudo_labels(verbose=False)
-
+        # quit()
         # compute stats on tiles
         pipeline.stats_on_tiles()
 
