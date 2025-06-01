@@ -675,18 +675,18 @@ class Pipeline():
                 is_new_tree = False
                 if verbose:
                     print("Set of overlapping instances: ", set(corresponding_instances))
-                    self.log += f"Set of overlapping instances: {set(corresponding_instances)}\n"
+                self.log += f"Set of overlapping instances: {set(corresponding_instances)}\n"
                 
                 if len(set(corresponding_instances)) == 1 and corresponding_instances[0] == 0:
                     is_new_tree = True
                     
                     if verbose:
                         print(f"Adding treeID {id_new_tree} because only grey and ground: ")
-                        self.log += f"Adding treeID {id_new_tree} because only grey and ground: \n"
+                    self.log += f"Adding treeID {id_new_tree} because only grey and ground: \n"
                 else:
                     if verbose:
                         print(f"Comparing to existing values")
-                        self.log += f"Comparing to existing values \n"
+                    self.log += f"Comparing to existing values \n"
 
                     is_new_tree = True
                     for instance in set(corresponding_instances):
@@ -712,7 +712,7 @@ class Pipeline():
                         intersection = np.vstack((new_file_x[intersection_mask], new_file_y[intersection_mask], new_file_z[intersection_mask]))
                         if verbose:
                             print(f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)}")
-                            self.log += f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)} \n"
+                        self.log += f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)} \n"
 
                         # check radius of intersection
                         range_x = np.min(intersection[0,:]) - np.max(intersection[0,:])
@@ -749,12 +749,12 @@ class Pipeline():
                             # test if trees are still recognisable
                             # later...
 
-                        new_file.treeID[mask] = id_new_tree
-                        id_new_tree += 1
+                    new_file.treeID[mask] = id_new_tree
+                    id_new_tree += 1
 
                     if verbose:
                         print("New tree with instance: ", id_new_tree)
-                        self.log += f"New tree with instance: {id_new_tree} \n"
+                    self.log += f"New tree with instance: {id_new_tree} \n"
 
                 
                 # set semantic p-label
@@ -863,6 +863,8 @@ class Pipeline():
 
         # run training script
         model_checkpoint = self.model_checkpoint_src if self.model_checkpoint_src != None else "/home/pdm/models/SegmentAnyTree/model_file"
+        print(self.model_checkpoint_src)
+        print(model_checkpoint)
         self.run_subprocess(
             src_script="/home/pdm/models/SegmentAnyTree/",
             script_name="./run_pipeline.sh",
