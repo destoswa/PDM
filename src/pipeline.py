@@ -90,7 +90,8 @@ class Pipeline():
 
         # update model to use if starting from existing pipeline
         if self.do_continue_from_existing:
-            self.model_checkpoint_src = os.path.join(self.result_dir, str(self.current_loop - 1))
+            pass
+            # self.model_checkpoint_src = os.path.join(self.result_dir, str(self.current_loop - 1))
 
         os.makedirs(self.result_dir, exist_ok=True)
         os.makedirs(self.result_pseudo_labels_dir, exist_ok=True)
@@ -650,7 +651,7 @@ class Pipeline():
                 results = list(tqdm(executor.map(partialFunc, range(len(self.classified_clusters))), total=len(self.classified_clusters), smoothing=0.9, desc="Updating pseudo-label", disable=~verbose))
             
             # Update the original file based on results and update the csv file with ref to trees
-            dict_reasons_of_rejection = {x:0 for x in ['total', 'is_ground', 'same_heighest_point', 'overlapping_diameter_greater_than_4', 'i_o_new_tree_greater_than_70_per']}
+            dict_reasons_of_rejection = {x:0 for x in ['total', 'is_ground', 'same_heighest_point', 'overlapping_greater_than_2', 'i_o_new_tree_greater_than_70_per', 'splitting_using_pca']}
             # print(dict_reasons_of_rejection)
             # print(pd.DataFrame(index=dict_reasons_of_rejection.keys(), data=dict_reasons_of_rejection.values()))
             # quit()
@@ -697,9 +698,9 @@ class Pipeline():
                             # break
 
                         other_tree_mask = new_file.treeID == instance
-                        new_file_x = np.array(getattr(new_file, 'x'))
-                        new_file_y = np.array(getattr(new_file, 'y'))
-                        new_file_z = np.array(getattr(new_file, 'z'))
+                        new_file_x = np.array(getattr(new_file, 'x')).reshape((-1,1))
+                        new_file_y = np.array(getattr(new_file, 'y')).reshape((-1,1))
+                        new_file_z = np.array(getattr(new_file, 'z')).reshape((-1,1))
  
                         # compare heighest points
                         if np.max(new_file_z[mask]) == np.max(new_file_z[other_tree_mask]):
@@ -709,18 +710,22 @@ class Pipeline():
                         
                         # get intersection
                         intersection_mask = mask & other_tree_mask
-                        intersection = np.vstack((new_file_x[intersection_mask], new_file_y[intersection_mask], new_file_z[intersection_mask]))
+                        # intersection = np.vstack((new_file_x[intersection_mask], new_file_y[intersection_mask], new_file_z[intersection_mask]))
+                        intersection = np.concatenate((new_file_x, new_file_y), axis=1)[intersection_mask]
                         if verbose:
                             print(f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)}")
                         self.log += f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)} \n"
 
                         # check radius of intersection
-                        range_x = np.min(intersection[0,:]) - np.max(intersection[0,:])
-                        range_y = np.min(intersection[1,:]) - np.max(intersection[1,:])
-                        range_z = np.min(intersection[2,:]) - np.max(intersection[2,:])
-                        if range_x > 4 or range_y > 4 or range_z > 4:
+                        intersection_pca = Pipeline.transform_with_pca(intersection)
+                        small_range = np.max(intersection_pca[:,1]) - np.min(intersection_pca[:,1])
+                        if small_range > 2:
+                        # range_x = np.min(intersection[0,:]) - np.max(intersection[0,:])
+                        # range_y = np.min(intersection[1,:]) - np.max(intersection[1,:])
+                        # range_z = np.min(intersection[2,:]) - np.max(intersection[2,:])
+                        # if range_x > 4 or range_y > 4 or range_z > 4:
                             is_new_tree = False
-                            dict_reasons_of_rejection["overlapping_diameter_greater_than_4"] += 1
+                            dict_reasons_of_rejection["overlapping_greater_than_2"] += 1
                             # break
 
                         # intersection over new tree
@@ -743,6 +748,7 @@ class Pipeline():
                         for instance in set(corresponding_instances):
                             if instance == 0 or len:
                                 continue
+                            dict_reasons_of_rejection["splitting_using_pca"] += 1
                             other_tree_mask = new_file.treeID == instance
                             intersection_mask = mask & other_tree_mask
 
@@ -866,8 +872,8 @@ class Pipeline():
 
         # run training script
         model_checkpoint = self.model_checkpoint_src if self.model_checkpoint_src != None else "/home/pdm/models/SegmentAnyTree/model_file"
-        print(self.model_checkpoint_src)
-        print(model_checkpoint)
+        # print(self.model_checkpoint_src)
+        # print(model_checkpoint)
         self.run_subprocess(
             src_script="/home/pdm/models/SegmentAnyTree/",
             script_name="./run_pipeline.sh",
@@ -883,7 +889,7 @@ class Pipeline():
         
         # update path to checkpoint
         # self.model_checkpoint_src = os.path.join(self.training.result_training_dir, str(self.current_loop))
-        self.model_checkpoint_src = self.result_current_loop_dir
+        # self.model_checkpoint_src = self.result_current_loop_dir
 
     def visualization(self):
         print("Saving metrics visualizations")

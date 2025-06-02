@@ -87,18 +87,18 @@ def show_inference_counts(data_src, src_location=None, show_figure=True, save_fi
     sums = df_data[["num_loop", "num_predictions", "num_garbage", "num_multi", "num_single"]].groupby('num_loop').sum()
     fractions = sums[["num_garbage", "num_multi", "num_single"]].div(sums["num_predictions"], axis=0)
     num_problematic = df_data[['num_loop', 'is_problematic']].groupby('num_loop').sum()
-    print(num_problematic)
+    # print(num_problematic)
     num_empty = df_data[['num_loop', 'is_empty']].groupby('num_loop').sum()
     fig, axs = plt.subplots(2,2, figsize=(12,12))
-    sns.lineplot(data=sums, ax=axs[0,0])
+    sns.lineplot(data=sums.drop('num_predictions', axis=1), ax=axs[0,0])
     sns.lineplot(data=fractions, ax=axs[0,1])
-    # sns.barplot(data=num_problematic, x="num_loop", y='is_problematic', ax=axs[1,0])
-    # sns.barplot(data=num_empty, x="num_loop", y='is_empty', ax=axs[1,1])
+    sns.lineplot(data=num_problematic, x="num_loop", y='is_problematic', ax=axs[1,0])
+    sns.lineplot(data=num_empty, x="num_loop", y='is_empty', ax=axs[1,1])
     # sns.lineplot(data=num_empty, ax=axs[1,1])
     axs[0,0].set_title('Count of the differente types of predictions')
     axs[0,1].set_title('Fraction over number of predictions')
-    # axs[1,0].set_title('Number of problematic samples')
-    # axs[1,1].set_title('Number of empty samples')
+    axs[1,0].set_title('Number of problematic samples')
+    axs[1,1].set_title('Number of empty samples')
 
     plt.tight_layout()
     if save_figure and src_location != None:
@@ -152,7 +152,8 @@ def show_inference_metrics(data_src, metrics = ['PQ', 'SQ', 'RQ', 'Pre', 'Rec', 
 def show_pseudo_labels_evolution(data_folder, src_location=None, show_figure=True, save_figure=False):
     # load and generate data to show
     num_loop = 0
-    count= {}
+    count_sem = {}
+    count_inf = {}
     change_from_previous = {}
     total_not_change = {}
     not_change_in_tile = {}
@@ -167,28 +168,33 @@ def show_pseudo_labels_evolution(data_folder, src_location=None, show_figure=Tru
         num_loop += 1
     if num_loop == 0:
         print("No loop folder from which to extract the pseudo-labels")
-        return   
-    
+        quit()   
+
     # processing each loop
     for _, num_loop in tqdm(enumerate(lst_loops), total=len(lst_loops), desc="Processing pseudo-labels for visualization"):
-        count[num_loop] = {}
+        count_sem[num_loop] = {}
         change_from_previous[num_loop] = {}
         total_not_change[num_loop] = {}
         not_change_in_tile[num_loop] = {}
+        
+        count_inf[num_loop] = []
         for tile_src in os.listdir(os.path.join(data_folder, str(num_loop), "pseudo_labels")):
             tile = laspy.read(os.path.join(data_folder, str(num_loop), "pseudo_labels", tile_src))
-            count[num_loop][tile_src] = [ np.sum(tile.classification == x) for x in [0, 1, 4]]
+            count_sem[num_loop][tile_src] = [ np.sum(tile.classification == x) for x in [0, 1, 4]]
+            count_inf[num_loop].append(len(set(tile.treeID)))
+            if tile == "color_grp_full_tile_270.laz":
+                print(len(set(tile.treeID)), ' - ', set(tile.treeID))
             if num_loop == 0:
                 previous_tiles[tile_src] = tile.classification
                 change_from_previous[num_loop][tile_src] = [0, 0, 0]
-                total_not_change[num_loop][tile_src] = count[num_loop][tile_src]
+                total_not_change[num_loop][tile_src] = count_sem[num_loop][tile_src]
                 not_change_in_tile[num_loop][tile_src] = [True] * len(tile)
             else:
                 total_not_change[num_loop][tile_src] = []
                 change_from_previous[num_loop][tile_src] = []
 
                 changes = tile.classification != previous_tiles[tile_src]
-                not_change_in_tile[num_loop][tile_src] = list(np.array(changes) & np.array(not_change_in_tile[num_loop - 1][tile_src]))
+                not_change_in_tile[num_loop][tile_src] = list(~np.array(changes) & np.array(not_change_in_tile[num_loop - 1][tile_src]))
 
                 # loop on categories
                 for cat in [0, 1, 4]:
@@ -199,73 +205,111 @@ def show_pseudo_labels_evolution(data_folder, src_location=None, show_figure=Tru
 
                     # total no-change
                     total_not_change[num_loop][tile_src].append(np.sum(np.array(not_change_in_tile[num_loop][tile_src]) & np.array(mask)))
-    
+
                 previous_tiles[tile_src] = tile.classification 
-     
+    
     # aggregation
     categories = ['grey', 'ground', 'tree']
-    count_agg= {x: [] for x in categories}
-    change_from_previous_agg= {x: [] for x in categories}
-    total_not_change_agg= {x: [] for x in categories}
+    count_sem_agg = {x: [] for x in categories}
+    count_inf_agg = []
+    change_from_previous_agg = {x: [] for x in categories}
+    total_not_change_agg = {x: [] for x in categories}
 
-    for num_loop in count.keys():
+    for num_loop in count_sem.keys():
+        count_inf_agg.append(np.mean(list(count_inf[num_loop])))
         for id_cat, cat in enumerate(categories):
-            count_agg[cat].append(np.sum(np.array([tile_val for tile_val in count[num_loop].values()]), axis=0)[id_cat])
-            change_from_previous_agg[cat].append(np.sum(np.array([tile_val for tile_val in change_from_previous[num_loop].values()]), axis=0)[id_cat])
-            total_not_change_agg[cat].append(np.sum(np.array([tile_val for tile_val in total_not_change[num_loop].values()]), axis=0)[id_cat])
+            count_sem_agg[cat].append(np.mean([tile_val for tile_val in count_sem[num_loop].values()], axis=0)[id_cat])
+            if num_loop > 0:
+                change_from_previous_agg[cat].append(np.mean([tile_val for tile_val in change_from_previous[num_loop].values()], axis=0)[id_cat])
+            total_not_change_agg[cat].append(np.mean([tile_val for tile_val in total_not_change[num_loop].values()], axis=0)[id_cat])
     
-    # plotting semantic
-    fig, axs = plt.subplots(2,2, figsize=(15,15))
+    # visualizing
+    fig, axs = plt.subplots(2,2, figsize=(12,12))
     axs = axs.flatten()
-    sns.lineplot(pd.DataFrame(count_agg), ax=axs[0])
+    sns.lineplot(pd.DataFrame(count_sem_agg), ax=axs[0])
     sns.lineplot(pd.DataFrame(change_from_previous_agg), ax=axs[1])
     sns.lineplot(pd.DataFrame(total_not_change_agg), ax=axs[2])
-    fig.delaxes(axs[3])
-    
+    sns.lineplot(count_inf_agg, ax=axs[3])
+    # fig.delaxes(axs[3])
+
     #   _titles and labels
-    axs[0].set_title('count')
+    axs[0].set_title('Count per semantic category')
     axs[1].set_title('Change from previous loop')
     axs[2].set_title('Unchanges from beggining')
+    axs[3].set_title('Number of instances')
     
-    plt.show()
+    plt.tight_layout()
+    if save_figure and src_location != None:
+        plt.savefig(src_location)
+
+    if show_figure:
+        plt.show()
 
     # plotting instances
     #...
     
 
 if __name__ == '__main__':
+    # import matplotlib.pyplot as plt
+    # import matplotlib.gridspec as gridspec
+    # import numpy as np
 
-    
-    # Example data
-    labels = ['Item 1', 'Item 2', 'Item 3']
-    above = [0.7, 0.4, 0.6]   # e.g., % of category A
-    below = [0.3, 0.6, 0.4]   # e.g., % of category B
+    # x = np.linspace(0, 10, 100)
+    # y = np.sin(x)
 
-    x = np.arange(len(labels))
+    # fig = plt.figure(figsize=(8, 6))  # You can adjust size
+    # gs = gridspec.GridSpec(2, 2)  # 2 rows, 2 columns
 
-    fig, ax = plt.subplots(figsize=(8, 5))
+    # # Left column: two individual axes
+    # ax1 = fig.add_subplot(gs[0, 0])  # Top-left
+    # ax2 = fig.add_subplot(gs[1, 0])  # Bottom-left
 
-    # Plot the bars
-    ax.bar(x, above, label='Category A', color='steelblue')
-    ax.bar(x, [-b for b in below], label='Category B', color='salmon')
+    # # Right column: one axes spanning both rows
+    # ax3 = fig.add_subplot(gs[:, 1])  # Span both rows
 
-    # Customizing the plot
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-    ax.axhline(0, color='black', linewidth=0.8)
-    ax.set_ylabel('Percentage')
-    ax.set_title('Diverging Bar Plot')
-    ax.legend()
+    # # Plot into each axis
+    # ax1.plot(x, y)
+    # ax1.set_title("Top Left")
 
-    plt.tight_layout()
-    plt.show()
-    quit()
-    src_data_train = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250427_140314_test\training_metrics.csv"
-    src_data_inf = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250427_140314_test\inference_metrics.csv"
-    src_data_semantic = r"D:\PDM_repo\Github\PDM\results\trainings\20250507_084214_test"
-    show_pseudo_labels_evolution(src_data_semantic)
-    quit()
+    # ax2.plot(x, -y)
+    # ax2.set_title("Bottom Left")
+
+    # ax3.plot(x, y**2)
+    # ax3.set_title("Right (Merged Axes)")
+
+    # plt.tight_layout()
+    # plt.show()
+    # quit()
+    # # Example data
+    # labels = ['Item 1', 'Item 2', 'Item 3']
+    # above = [0.7, 0.4, 0.6]   # e.g., % of category A
+    # below = [0.3, 0.6, 0.4]   # e.g., % of category B
+
+    # x = np.arange(len(labels))
+
+    # fig, ax = plt.subplots(figsize=(8, 5))
+
+    # # Plot the bars
+    # ax.bar(x, above, label='Category A', color='steelblue')
+    # ax.bar(x, [-b for b in below], label='Category B', color='salmon')
+
+    # # Customizing the plot
+    # ax.set_xticks(x)
+    # ax.set_xticklabels(labels)
+    # ax.axhline(0, color='black', linewidth=0.8)
+    # ax.set_ylabel('Percentage')
+    # ax.set_title('Diverging Bar Plot')
+    # ax.legend()
+
+    # plt.tight_layout()
+    # plt.show()
+    # quit()
+    src_data_train = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250527_095351_first_long_run_modified\training_metrics.csv"
+    src_data_inf = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250527_095351_first_long_run_modified\inference_metrics.csv"
+    src_data_semantic = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250527_095351_first_long_run_modified"
+    # show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), save_figure=True, show_figure=True)
+    # quit()
     # print(loops)
-    # show_global_metrics(src_data_train)
-    # show_inference_counts(src_data_inf)
-    show_inference_metrics(src_data_inf)
+    # show_global_metrics(src_data_train, src_location=os.path.join(src_data_semantic, "images/training_metrics.png"), save_figure=True, show_figure=True)
+    show_inference_counts(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_count.png"), save_figure=True, show_figure=True)
+    # show_inference_metrics(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_metrics.png"), save_figure=True, show_figure=True)
