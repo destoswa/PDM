@@ -49,6 +49,10 @@ class Pipeline():
         self.do_continue_from_existing = cfg.pipeline.preload.do_continue_from_existing
         self.log = ""
 
+        # config regarding preprocess
+        self.flatten = cfg.pipeline.processes.do_flatten
+        self.do_remove_hanging_points = cfg.pipeline.processes.do_remove_hanging_points
+
         # config regarding inference
         self.inference = cfg.segmenter.inference
         self.preds_src = ""
@@ -375,16 +379,6 @@ class Pipeline():
             shutil.rmtree(temp_seg_src)
         os.mkdir(temp_seg_src)
 
-
-
-        # list_files = [x for x in os.listdir(os.path.join(self.root_src, self.data_src)) if x.endswith(self.file_format) and x not in self.problematic_tiles]
-        # if self.classification.processes.do_remove_empty_tiles:
-        #     list_files = [x for x in list_files if x not in self.empty_tiles]
-
-        # for _, file in tqdm(enumerate(list_files), total=len(list_files), desc="Processing"):
-
-
-
         # creates pack of samples to infer on
         if self.inference.num_tiles_per_inference > 1:
             list_pack_of_tiles = [self.tiles_to_process[x:min(y,len(self.tiles_to_process))] for x, y in zip(
@@ -395,12 +389,6 @@ class Pipeline():
                 list_pack_of_tiles.append(self.tiles_to_process[(len(list_pack_of_tiles)*self.inference.num_tiles_per_inference)::])
         else:
             list_pack_of_tiles = [[x] for x in self.tiles_to_process]
-        # for _, pack in tqdm(enumerate(list_pack_of_tiles), total=len(list_pack_of_tiles), desc="Processing"):
-        #     if verbose:
-        #         print("===\tProcessing files: ")
-        #         for file in pack:
-        #             print("\t", file)
-        #         print("===")
 
         for _, pack in tqdm(enumerate(list_pack_of_tiles), total=len(list_pack_of_tiles), desc="Processing"):
             if verbose:
@@ -417,9 +405,7 @@ class Pipeline():
             # copy files to temp folder
             for file in pack:
                 original_file_src = os.path.join(self.result_pseudo_labels_dir, self.data_src, file)
-                # original_file_src = os.path.join(self.data_dest, file)
                 temp_file_src = os.path.join(temp_seg_src, file)
-                # print(temp_file_src)
                 shutil.copyfile(original_file_src, temp_file_src)
 
             return_code = self.run_subprocess(
@@ -447,68 +433,8 @@ class Pipeline():
                     delete_zip=True
                     )
 
-                # # check if empty
-                # src_pred_file = os.path.join(self.preds_src, file.split('.')[0] + '_out.' + self.file_format)
-                # tile = laspy.read(src_pred_file)
-                # num_instances = len(set(tile.PredInstance))
-                # if num_instances == 1:
-                #     if verbose:
-                #         print(f"Empty tile: {file}")
-                #     self.empty_tiles.append(file)
-                #     if self.classification.processes.do_remove_empty_tiles:
-                #         os.remove(os.path.join(src_pred_file))
-                #         # if file in self.tiles_to_process:
-                #         #     self.tiles_to_process.remove(file)
                 if verbose:
                     print("Segmentation done!")
-        # # loops on samples:
-        # for _, file in tqdm(enumerate(self.tiles_to_process), total=len(self.tiles_to_process), desc="Processing"):
-        #     if verbose:
-        #         print("===\tProcessing file: ", file, "\t===")
-        #     # original_file_src = os.path.join(os.path.join(self.root_src, self.data_src, file))
-        #     original_file_src = os.path.join(self.result_pseudo_labels_dir, self.data_src, file)
-        #     temp_file_src = os.path.join(os.path.join(temp_seg_src, file))
-        #     shutil.copyfile(
-        #         original_file_src,
-        #         temp_file_src,
-        #     )
-            
-        #     return_code = self.run_subprocess(
-        #         src_script=self.segmenter_root_src,
-        #         script_name="./run_oracle_pipeline.sh",
-        #         params= [temp_seg_src, temp_seg_src],
-        #         verbose=verbose
-        #         )
-        
-        #     # catch errors
-        #     if return_code != 0:
-        #         if verbose:
-        #             print(f"Problem with tile {file}")
-        #         self.problematic_tiles.append(file)
-        #     else:
-        #         # unzip results
-        #         if verbose:
-        #             print("Unzipping results...")
-        #         self.unzip_laz_files(
-        #             zip_path=os.path.join(temp_seg_src, "results.zip"),
-        #             extract_to=self.preds_src,
-        #             delete_zip=True
-        #             )
-
-        #         # check if empty
-        #         src_pred_file = os.path.join(self.preds_src, file.split('.')[0] + '_out.' + self.file_format)
-        #         tile = laspy.read(src_pred_file)
-        #         num_instances = len(set(tile.PredInstance))
-        #         if num_instances == 1:
-        #             if verbose:
-        #                 print(f"Empty tile: {file}")
-        #             self.empty_tiles.append(file)
-        #             if self.classification.processes.do_remove_empty_tiles:
-        #                 os.remove(os.path.join(src_pred_file))
-        #                 # if file in self.tiles_to_process:
-        #                 #     self.tiles_to_process.remove(file)
-        #         if verbose:
-        #             print("Segmentation done!")
 
         # removing temp file
         os.remove(temp_file_src)

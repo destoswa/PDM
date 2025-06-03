@@ -13,14 +13,15 @@ import json
 import warnings
 import zipfile
 
+from splitting import split_instance
+from format_conversions import convert_all_in_folder 
+
 if __name__ == "__main__":
     sys.path.append(os.getcwd())
 
 ENV = os.environ['CONDA_DEFAULT_ENV']
 if ENV == "pdal_env":
     import pdal
-    from src.splitting import split_instance
-    from src.format_conversions import convert_all_in_folder 
 
 
 class TilesLoader():
@@ -210,6 +211,41 @@ class TilesLoader():
         # remove points based on mask
         laz_in.points = laz_in.points[mask_isolated]
         laz_in.write(src_laz_out)
+
+    @staticmethod
+    def change_var_val_yaml(src_yaml, var, val):
+        # load yaml file
+        yaml_raw = OmegaConf.load(src_yaml)
+        yaml = OmegaConf.create(yaml_raw)  # now data.first_subsampling works
+        
+        # find the correct variable to change
+        keys = var.split('/')
+        d = yaml
+        for key in keys[:-1]:
+            d = d.setdefault(key, {})  # ensures intermediate keys exist
+
+        # change value
+        d[keys[-1]] = val  # set the new value
+        
+        # save back to yaml file
+        OmegaConf.save(yaml, src_yaml)
+
+    @staticmethod
+    def unzip_laz_files(zip_path, extract_to=".", delete_zip=True):
+        """Extract all .laz files from a zip archive to a target directory root.
+
+        zip_path (str): Path to the .zip archive.
+        extract_to (str): Directory where .laz files will be extracted. Defaults to current directory.
+        """
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            laz_files = [f for f in zip_ref.namelist() if f.lower().endswith('.laz') and not f.endswith('/')]
+            for file in laz_files:
+                # Extract and flatten the path to root
+                filename = os.path.basename(file)
+                with zip_ref.open(file) as source, open(os.path.join(extract_to, filename), 'wb') as target:
+                    target.write(source.read())
+        if delete_zip:
+            os.remove(zip_path)
 
     # ===================================
     # === METHODS OF THE TILES LOADER ===
@@ -488,14 +524,28 @@ class TilesLoader():
         # load csv of clusters
         df_clusters = pd.read_csv(self.tilesloader_conf.evaluate.cluster_csv_path, sep=';')
         number_of_clusters = sorted(df_clusters.cluster_id.unique().tolist())
-        print(df_clusters.head())
+        # print(number_of_clusters)
 
         # remove tiles if necessary
         if len(list_of_tiles_to_remove) > 0:
             df_clusters = df_clusters.loc[~df_clusters.tile_name.isin(list_of_tiles_to_remove)]
         lst_tiles = df_clusters.tile_name.values
-        print(df_clusters.head())
+        lst_tiles = []
+        # print(df_clusters.head())
+        # quit()
+        # print(df_clusters.)
+        num_per_cluster = 5
+        for cluster in number_of_clusters:
+            list_clusters = df_clusters.loc[df_clusters.cluster_id == cluster].sample(n=num_per_cluster).tile_name.values
+            if len(list_clusters) != num_per_cluster:
+                raise ValueError(f"Not enough samples left in cluster {cluster}!")
+            lst_tiles.append(list_clusters)
+            # print(df_clusters.loc[df_clusters.cluster_id == cluster].sample(n=num_per_cluster))
+        lst_tiles = [x for row in lst_tiles for x in row]
 
+        # print(lst_tiles)
+        # print(len(lst_tiles))
+        # quit()
         # loop on loops:
         loops = []
         x = 0
@@ -508,16 +558,27 @@ class TilesLoader():
         if len(loops) == 0:
             print("No loops in run folder..")
             quit()
-        lst_tiles = lst_tiles[0:10]
-        for _, loop in tqdm(enumerate(loops), total=len(loops), desc="Evaluating"):
-            if verbose:
-                print(f"Processing loop {loop+1}/{len(loops)}")
+        # lst_tiles = lst_tiles[0:10]
+        # for _, loop in tqdm(enumerate(loops), total=len(loops), desc="Evaluating", disable=verbose==True):
+        for loop in loops:
+            if loop < 3:
+                continue
+            # if verbose:
+            print(f"Processing loop {loop+1}/{len(loops)}")
+            loop_folder = os.path.join(self.tilesloader_conf.root_src, self.tilesloader_conf.evaluate.run_src, str(loop))
             # segment on tiles
-            inference_res_src = os.path.join(self.tilesloader_conf.evaluate.run_src, str(loop), 'inference')
+            #   _change location of model
+            TilesLoader.change_var_val_yaml(
+                src_yaml=self.segmenter_conf.inference.config_eval_src,
+                var="checkpoint_dir",
+                val=loop_folder,
+            )
+            inference_res_src = os.path.join(self.root_src, self.tilesloader_conf.evaluate.run_src, str(loop), 'evaluation')
             os.makedirs(inference_res_src, exist_ok=True)
+            #   _loop on tiles
             for _, tile in tqdm(enumerate(lst_tiles), total=len(lst_tiles), desc="Infering on tiles", disable=verbose==False):
                 # create architecture
-                temp_folder = os.path.join(self.tilesloader_conf.evaluate.run_src, 'temp_inf')
+                temp_folder = os.path.join(self.root_src, self.tilesloader_conf.evaluate.run_src, 'temp_inf')
                 if os.path.exists(temp_folder):
                     shutil.rmtree(temp_folder)
                 os.makedirs(temp_folder)
@@ -525,19 +586,69 @@ class TilesLoader():
                     os.path.join(self.tilesloader_conf.evaluate.cluster_src, tile),
                     os.path.join(temp_folder, tile),
                 )
+
                 # segment
-                print(temp_folder)
-                print(inference_res_src)
                 return_code = self.run_subprocess(
                     src_script=self.segmenter_conf.root_model_src,
                     script_name="./run_oracle_pipeline.sh",
-                    params= [os.path.join(self.root_src,temp_folder), os.path.join(self.root_src, inference_res_src)],
+                    params= [temp_folder, temp_folder],
                     verbose=verbose
                 )
-                print(return_code)
+                if return_code != 0:
+                    if verbose:
+                        print(f"Problem with tile {tile}:")
+                    continue
+                else:
+                    # unzip results
+                    if verbose:
+                        print("Unzipping results...")
+                    self.unzip_laz_files(
+                        zip_path=os.path.join(temp_folder, "results.zip"),
+                        extract_to=inference_res_src,
+                        delete_zip=True
+                        )
+                
+                # classify on samples
+                tile_out = tile.split('.laz')[0] + '_out.laz'
+                tile_out_path = os.path.join(inference_res_src, tile_out)
+                split_instance(tile_out_path, verbose=verbose)
 
-            # quit()
-            # classify on samples
+                # convert instances to pcd
+                dir_target = tile_out_path.split('.laz')[0] + "_split_instance"
+                # dir_target = self.preds_src + '/' + file.split('/')[-1].split('.')[0] + "_split_instance"
+                convert_all_in_folder(
+                    src_folder_in=dir_target, 
+                    src_folder_out=os.path.join(dir_target, 'data'), 
+                    in_type='laz', 
+                    out_type='pcd',
+                    verbose=verbose
+                    )
+                
+                # makes predictions
+                input_folder = dir_target
+                output_folder = os.path.join(dir_target, 'data')
+                code_return = self.run_subprocess(
+                    src_script=self.classifier_conf.root_model_src,
+                    script_name="./run_inference.sh",
+                    params= [input_folder, output_folder],
+                    verbose=verbose
+                    )
+                if code_return != 0:
+                    print(f"WARNING! Subprocess for classification return code {code_return}!!")
+                
+                # convert predictions to laz
+                # convert_all_in_folder(src_folder_in=output_folder, src_folder_out=output_folder, in_type='pcd', out_type='laz')
+                self.run_subprocess(
+                    src_script='/home/pdm',
+                    script_name="run_format_conversion.sh",
+                    params=[output_folder, output_folder, 'pcd', 'laz'],
+                    verbose=verbose
+                )
+
+                # remove pcd files
+                for file in os.listdir(output_folder):
+                    if file.endswith('.pcd'):
+                        os.remove(os.path.join(output_folder, file))
 
             # add classification results in csv
             pass
@@ -555,7 +666,8 @@ if __name__ == "__main__":
     cfg = OmegaConf.merge(cfg_tilesloader, cfg_segmenter, cfg_classifier)
     tiles_loader = TilesLoader(cfg)
 
-    list_to_drop = ["color_grp_full_tile_568.laz", "color_grp_full_tile_504.laz"]
+    # list_to_drop = ["color_grp_full_tile_568.laz", "color_grp_full_tile_504.laz"]
+    list_to_drop = [x for x in os.listdir(os.path.join(cfg_tilesloader.tiles_loader.root_src, cfg_tilesloader.tiles_loader.evaluate.run_src, "pseudo_labels")) if x.endswith('.laz')]
 
     tiles_loader.evaluate(list_to_drop, verbose=True)
     quit()

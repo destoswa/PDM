@@ -13,6 +13,7 @@ from time import time
 
 # from src.format_conversions import convert_all_in_folder
 from src.pipeline import Pipeline
+from src.preprocessing import flattening
 
         
 
@@ -55,14 +56,22 @@ def main(cfg):
     VAL_FRAC = cfg.pipeline.val_frac
 
     # processes
-    SAVE_PSEUDO_LABELS_PER_LOOP = cfg.pipeline.save_pseudo_labels_per_loop
-
+    DO_REMOVE_HANGING_POINTS = cfg.pipeline.processes.do_remove_hanging_points
+    DO_FLATTEN = cfg.pipeline.processes.do_flatten
 
     # assertions
     assert TRAIN_FRAC + TEST_FRAC + VAL_FRAC == 1.0
 
     # start timer
     time_start_process = time()
+
+    # preprocess
+    if DO_REMOVE_HANGING_POINTS:
+        pass
+
+    if DO_FLATTEN:
+        flattening(DATA_SRC)
+
 
     # create pipeline
     pipeline = Pipeline(cfg) 
