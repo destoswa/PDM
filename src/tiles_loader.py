@@ -4,6 +4,8 @@ import shutil
 import subprocess
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 from tqdm import tqdm
 import laspy
 from omegaconf import OmegaConf
@@ -524,28 +526,23 @@ class TilesLoader():
         # load csv of clusters
         df_clusters = pd.read_csv(self.tilesloader_conf.evaluate.cluster_csv_path, sep=';')
         number_of_clusters = sorted(df_clusters.cluster_id.unique().tolist())
-        # print(number_of_clusters)
 
         # remove tiles if necessary
         if len(list_of_tiles_to_remove) > 0:
             df_clusters = df_clusters.loc[~df_clusters.tile_name.isin(list_of_tiles_to_remove)]
         lst_tiles = df_clusters.tile_name.values
         lst_tiles = []
-        # print(df_clusters.head())
-        # quit()
-        # print(df_clusters.)
+
         num_per_cluster = 5
         for cluster in number_of_clusters:
-            list_clusters = df_clusters.loc[df_clusters.cluster_id == cluster].sample(n=num_per_cluster).tile_name.values
+            list_clusters = df_clusters.loc[df_clusters.cluster_id == cluster].sample(n=num_per_cluster, random_state=42).tile_name.values
+
             if len(list_clusters) != num_per_cluster:
                 raise ValueError(f"Not enough samples left in cluster {cluster}!")
             lst_tiles.append(list_clusters)
             # print(df_clusters.loc[df_clusters.cluster_id == cluster].sample(n=num_per_cluster))
-        lst_tiles = [x for row in lst_tiles for x in row]
+        lst_tiles_flatten = [x for row in lst_tiles for x in row]
 
-        # print(lst_tiles)
-        # print(len(lst_tiles))
-        # quit()
         # loop on loops:
         loops = []
         x = 0
@@ -558,11 +555,10 @@ class TilesLoader():
         if len(loops) == 0:
             print("No loops in run folder..")
             quit()
+
         # lst_tiles = lst_tiles[0:10]
         # for _, loop in tqdm(enumerate(loops), total=len(loops), desc="Evaluating", disable=verbose==True):
         for loop in loops:
-            if loop < 3:
-                continue
             # if verbose:
             print(f"Processing loop {loop+1}/{len(loops)}")
             loop_folder = os.path.join(self.tilesloader_conf.root_src, self.tilesloader_conf.evaluate.run_src, str(loop))
@@ -575,8 +571,9 @@ class TilesLoader():
             )
             inference_res_src = os.path.join(self.root_src, self.tilesloader_conf.evaluate.run_src, str(loop), 'evaluation')
             os.makedirs(inference_res_src, exist_ok=True)
+
             #   _loop on tiles
-            for _, tile in tqdm(enumerate(lst_tiles), total=len(lst_tiles), desc="Infering on tiles", disable=verbose==False):
+            for _, tile in tqdm(enumerate(lst_tiles_flatten), total=len(lst_tiles_flatten), desc="Infering on tiles", disable=verbose==False):
                 # create architecture
                 temp_folder = os.path.join(self.root_src, self.tilesloader_conf.evaluate.run_src, 'temp_inf')
                 if os.path.exists(temp_folder):
@@ -615,7 +612,6 @@ class TilesLoader():
 
                 # convert instances to pcd
                 dir_target = tile_out_path.split('.laz')[0] + "_split_instance"
-                # dir_target = self.preds_src + '/' + file.split('/')[-1].split('.')[0] + "_split_instance"
                 convert_all_in_folder(
                     src_folder_in=dir_target, 
                     src_folder_out=os.path.join(dir_target, 'data'), 
@@ -650,15 +646,85 @@ class TilesLoader():
                     if file.endswith('.pcd'):
                         os.remove(os.path.join(output_folder, file))
 
-            # add classification results in csv
-            pass
+        # process evolution per cluster
+        results_tot = {y: {x:{'garbage': [], 'multi': [], 'single': []} for x in loops} for y in range(len(lst_tiles))}
 
-        # plot evolution per cluster 
-        pass
+        for id_group, group in enumerate(["Crouded flat", "Crouded steep", "Empty steep", "Empty flat"]):
+            print("Group : ", id_group)
+            for loop in loops:
+                src_evaluation = os.path.join(self.root_src, self.tilesloader_conf.evaluate.run_src, str(loop), 'evaluation')
+                list_folders = [x for x in os.listdir(src_evaluation) if os.path.isdir(os.path.join(src_evaluation, x)) and x.split('_out_split_instance')[0]+'.laz' in lst_tiles[id_group]]
 
+                # load results per 
+                for folder in list_folders:
+                    results_loop = pd.read_csv(os.path.join(src_evaluation, folder, "results/results.csv"), sep=';')
+
+                    for cat_num, cat_name in enumerate(['garbage', 'multi', 'single']):
+                        results_tot[id_group][loop][cat_name].append(len(results_loop.loc[results_loop['class'] == cat_num]))
+        
+        results_agg = {
+            x: {
+                'garbage': [np.nanmean(results_tot[x][loop]["garbage"]) for loop in loops],
+                'multi': [np.nanmean(results_tot[x][loop]["multi"]) for loop in loops],
+                'single': [np.nanmean(results_tot[x][loop]["single"]) for loop in loops],
+                } for x in range(len(lst_tiles))}
+
+        fig, axs = plt.subplots(2,2,figsize=(12,12))
+        axs = axs.flatten()
+        for id_ax, ax in enumerate(axs):
+            df_results_agg = pd.DataFrame(results_agg[id_ax], index=range(len(loops)))
+            ax.plot(df_results_agg)
+
+        plt.savefig(os.path.join(self.root_src, self.tilesloader_conf.evaluate.run_src, 'test.png'))
+
+
+        # # process evolution per cluster
+        # results_tot = {x:{'garbage': [], 'multi': [], 'single': []} for x in loops}
+        # for loop in loops:
+        #     src_evaluation = os.path.join(self.root_src, self.tilesloader_conf.evaluate.run_src, str(loop), 'evaluation')
+        #     # loop on instances:
+        #     list_folders = [x for x in os.list_dir(src_evaluation) if os.path.isdir(x)]
+        #     # load results per 
+        #     for folder in list_folders:
+        #         results_loop = pd.read_csv(os.path.join(src_evaluation, folder, "results.csv"))
+        #         print(results_loop.groupby('class').count())
+        #         distrib = results_loop.groupby('class').count().values
+        #         results_tot[loop]['garbage'].append(distrib[0])
+        #         results_tot[loop]['multi'].append(distrib[1])
+        #         results_tot[loop]['single'].append(distrib[2])
+        
+        # results_agg = {loop: [
+        #     np.mean(results_tot[loop]["garbage"]), 
+        #     np.mean(results_tot[loop]["multi"]), 
+        #     np.mean(results_tot[loop]["single"])
+        #     ] for loop in loops}
+        # df_results_agg = pd.DataFrame(results_agg, columns=['garbage', 'multi', 'single'])
+        # # plot evolution per cluster
+        # fig = plt.figure()
+        # sns.lineplot(df_results_agg)
+        # plt.show()
+
+        
+            
 
 
 if __name__ == "__main__":
+    # test = {
+    #     0: [0.3, 0.4, 0.5],
+    #     1: [0.3, 0.4, 0.5],
+    #     2: [0.3, 0.4, 0.5],
+    # }
+    # df_test = pd.DataFrame(test)
+    # fig = plt.figure()
+    # plt.plot(df_test)
+    # # sns.lineplot(df_test)
+    # # plt.show()
+    # quit()
+
+
+
+
+
     time_start = time.time()
     cfg_tilesloader = OmegaConf.load("config/tiles_loader.yaml")
     cfg_segmenter = OmegaConf.load("config/segmenter.yaml")

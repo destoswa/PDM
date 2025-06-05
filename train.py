@@ -69,14 +69,15 @@ def main(cfg):
     if DO_REMOVE_HANGING_POINTS:
         pass
 
-    if DO_FLATTEN:
-        flattening(DATA_SRC)
+    # if DO_FLATTEN:
+    #     flattening(DATA_SRC)
 
 
     # create pipeline
     pipeline = Pipeline(cfg) 
 
     # start looping
+    # shutil.rmtree(os.path.join(DATA_SRC, 'loops/'))
     for loop in range(pipeline.current_loop, NUM_LOOPS):
         print(f"===== LOOP {loop + 1} / {NUM_LOOPS} =====")
         time_start_loop = time()
@@ -84,9 +85,10 @@ def main(cfg):
         pipeline.result_current_loop_dir = os.path.join(pipeline.result_dir, str(loop))
 
         # prepare architecture
-        os.makedirs(os.path.join(DATA_SRC, f'loops/{loop}/'), exist_ok=True)
-        for file in [f for f in os.listdir(DATA_SRC) if f.endswith(FILE_FORMAT)]:
-            shutil.copyfile(os.path.join(DATA_SRC, file), os.path.join(DATA_SRC, f'loops/{loop}/{file}'))
+        # os.makedirs(os.path.join(DATA_SRC, f'loops/{loop}/'), exist_ok=True)
+
+        # shutil.copytree(DATA_SRC, os.path.join(DATA_SRC, f'loops/{loop}'))
+
         pipeline.data_src = os.path.join(DATA_SRC, f'loops/{loop}/')
         pipeline.preds_src = os.path.join(pipeline.data_src, 'preds')
         
@@ -116,9 +118,9 @@ def main(cfg):
         # print("done")
 
         # segment
-        # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
-        pipeline.segment(verbose=False)
-        pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
+        if loop > 0:
+            pipeline.segment(verbose=False)
+            pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
 
 
         # pipeline.problematic_tiles = ["color_grp_full_tile_4.laz", "color_grp_full_tile_7.laz", "color_grp_full_tile_12.laz", "color_grp_full_tile_10.laz"]
@@ -162,14 +164,6 @@ def main(cfg):
 
         # save logs
         pipeline.save_log(pipeline.result_current_loop_dir, clear_after=True)
-
-        # # saving results
-        # if SAVE_PSEUDO_LABELS_PER_LOOP:
-        #     os.makedirs(os.path.join(pipeline.result_dir, f'{loop}/pseudo_labels'))
-        #     for file in [f for f in os.listdir(pipeline.result_dir) if f.endswith(FILE_FORMAT)]:
-        #         shutil.copyfile(os.path.join(pipeline.result_dir, file), 
-        #                         os.path.join(pipeline.result_dir, f'loops/{loop}/pseudo_labels')
-        #                         )
 
         delta_time_loop = time() - time_start_loop
         hours = int(delta_time_loop // 3600)
