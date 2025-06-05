@@ -52,9 +52,9 @@ def show_metric_over_samples(df, metric_name, ax=None, save_figure=False, src_fi
 
 
 
-def show_global_metrics(src_data, exclude_columns = ['num_loop', 'num_epoch', 'stage', 'map'], src_location=None, show_figure=True, save_figure=False):
+def show_global_metrics(data_src, exclude_columns = ['num_loop', 'num_epoch', 'stage', 'map'], src_location=None, show_figure=True, save_figure=False):
     # load and prepare data
-    df_data = pd.read_csv(src_data, sep=';')
+    df_data = pd.read_csv(data_src, sep=';')
 
     # load metrics and set col and rows
     metrics = [metric for metric in df_data.columns if metric not in exclude_columns]
@@ -108,19 +108,20 @@ def show_inference_counts(data_src, src_location=None, show_figure=True, save_fi
         plt.show()
 
 
-def show_inference_metrics(data_src, metrics = ['PQ', 'SQ', 'RQ', 'Pre', 'Rec', 'mIoU'], src_location=None, show_figure=True, save_figure=False):
+def show_inference_metrics(data_src, metrics = ['PQ', 'SQ', 'RQ', 'Pre', 'Rec'], src_location=None, show_figure=True, save_figure=False):
     abrev_to_name = {
         'PQ': "Panoptic Quality",
         'SQ': "Segmentation Quality",
         'RQ': "Recognition Quality",
         'Pre': "Precision",
         'Rec': "Recall",
-        'mIoU': "Mean Intersection over Union",
+        # 'mIoU': "Mean Intersection over Union",
     }
     df_data = pd.read_csv(data_src, sep=';')
+    df_data = df_data.loc[df_data.num_loop != 0]
 
     # plot
-    fig, axes = plt.subplots(3, 2, figsize=(15, 10), sharex=True, sharey=False)
+    fig, axes = plt.subplots(3, 2, figsize=(12, 16), sharex=True, sharey=False)
     axes = axes.flatten()
 
     for i, metric in enumerate(metrics):
@@ -304,12 +305,12 @@ if __name__ == '__main__':
     # plt.tight_layout()
     # plt.show()
     # quit()
-    src_data_train = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250527_095351_first_long_run_modified\training_metrics.csv"
-    src_data_inf = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250527_095351_first_long_run_modified\inference_metrics.csv"
-    src_data_semantic = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250527_095351_first_long_run_modified"
-    # show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), save_figure=True, show_figure=True)
+    src_data_train = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250603_203800_training_from_initial_model\training_metrics.csv"
+    src_data_inf = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250603_203800_training_from_initial_model\inference_metrics.csv"
+    src_data_semantic = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250603_203800_training_from_initial_model"
+    # show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), save_figure=False, show_figure=True)
     # quit()
     # print(loops)
-    # show_global_metrics(src_data_train, src_location=os.path.join(src_data_semantic, "images/training_metrics.png"), save_figure=True, show_figure=True)
-    show_inference_counts(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_count.png"), save_figure=True, show_figure=True)
-    # show_inference_metrics(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_metrics.png"), save_figure=True, show_figure=True)
+    # show_global_metrics(src_data_train, src_location=os.path.join(src_data_semantic, "images/training_metrics.png"), save_figure=False, show_figure=True)
+    # show_inference_counts(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_count.png"), save_figure=False, show_figure=True)
+    show_inference_metrics(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_metrics.png"), save_figure=False, show_figure=True)

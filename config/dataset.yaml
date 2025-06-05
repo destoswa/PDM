@@ -1,4 +1,4 @@
 dataset:
   project_root_src: /home/pdm/
-  data_src: data/dataset_pipeline/tiles_20
+  data_src: data/dataset_pipeline/tiles_20_flatten
   file_format: laz

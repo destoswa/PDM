@@ -21,7 +21,7 @@ if __name__ == "__main__":
 from src.format_conversions import convert_all_in_folder
 from src.pseudo_labels_creation import update_attribute_where_cluster_match
 from src.metrics import compute_classification_results, compute_panoptic_quality, compute_mean_iou
-from src.visualization import show_global_metrics, show_inference_counts, show_inference_metrics
+from src.visualization import show_global_metrics, show_inference_counts, show_inference_metrics, show_pseudo_labels_evolution
 from src.splitting import split_instance
 # from models.KDE_classifier.inference import inference
 
@@ -48,6 +48,10 @@ class Pipeline():
         self.save_pseudo_labels_per_loop = cfg.pipeline.processes.save_pseudo_labels_per_loop
         self.do_continue_from_existing = cfg.pipeline.preload.do_continue_from_existing
         self.log = ""
+
+        # config regarding preprocess
+        self.do_flatten = cfg.pipeline.processes.do_flatten
+        self.do_remove_hanging_points = cfg.pipeline.processes.do_remove_hanging_points
 
         # config regarding inference
         self.inference = cfg.segmenter.inference
@@ -133,6 +137,15 @@ class Pipeline():
                 
             self.training_metrics.to_csv(self.training_metrics_src, sep=';', index=False)
             self.inference_metrics.to_csv(self.inference_metrics_src, sep=';', index=False)
+        else:
+            if os.path.exists(self.training_metrics_src):
+                self.training_metrics = pd.read_csv(self.training_metrics_src, sep=';')
+            else:
+                self.training_metrics.to_csv(self.training_metrics_src, sep=';', index=False)
+            if os.path.exists(self.inference_metrics_src):
+                self.inference_metrics = pd.read_csv(self.inference_metrics_src, sep=';')
+            else:
+                self.inference_metrics.to_csv(self.inference_metrics_src, sep=';', index=False)
 
     @staticmethod
     def unzip_laz_files(zip_path, extract_to=".", delete_zip=True):
@@ -293,6 +306,47 @@ class Pipeline():
         
         return maskA, maskB
 
+    @staticmethod
+    def match_pointclouds(laz1, laz2):
+        """Sort laz2 to match the order of laz1 without changing laz1's order.
+
+        Args:
+            laz1: laspy.LasData object (reference order)
+            laz2: laspy.LasData object (to be sorted)
+        
+        Returns:
+            laz2 sorted to match laz1
+        """
+        # Retrieve and round coordinates for robust matching
+        coords_1 = np.round(np.vstack((laz1.x, laz1.y, laz1.z)), 2).T
+        coords_2 = np.round(np.vstack((laz2.x, laz2.y, laz2.z)), 2).T
+
+        # Verify laz2 is of the same size as laz1
+        assert len(coords_2) == len(coords_1), "laz2 should be a subset of laz1"
+
+        # Create a dictionary mapping from coordinates to indices
+        coord_to_idx = {tuple(coord): idx for idx, coord in enumerate(coords_1)}
+
+        # Find indices in laz1 that correspond to laz2
+        matching_indices = []
+        failed = 0
+        for coord in coords_2:
+            try:
+                matching_indices.append(coord_to_idx[tuple(coord)])
+            except Exception as e:
+                failed += 1
+        # print(f"Number of non-matching points: {failed}")
+
+        matching_indices = np.array([coord_to_idx[tuple(coord)] for coord in coords_2])
+
+        # Sort laz2 to match laz1
+        sorted_indices = np.argsort(matching_indices)
+
+        # Apply sorting to all attributes of laz2
+        laz2.points = laz2.points[sorted_indices]
+
+        return laz2  # Now sorted to match laz1
+
     def run_subprocess(self, src_script, script_name, add_to_log=True, params=None, verbose=True):
         # go at the root of the segmenter
         old_current_dir = os.getcwd()
@@ -379,15 +433,20 @@ class Pipeline():
             shutil.rmtree(temp_seg_src)
         os.mkdir(temp_seg_src)
 
-
-
-        # list_files = [x for x in os.listdir(os.path.join(self.root_src, self.data_src)) if x.endswith(self.file_format) and x not in self.problematic_tiles]
-        # if self.classification.processes.do_remove_empty_tiles:
-        #     list_files = [x for x in list_files if x not in self.empty_tiles]
-
-        # for _, file in tqdm(enumerate(list_files), total=len(list_files), desc="Processing"):
-
-
+        # if flattening
+        original_tiles_to_process = []
+        original_tiles_src = os.path.dirname(self.data_src)
+        if self.do_flatten:
+            self.data_src = os.path.join(self.data_src, 'flatten')
+            new_tiles_to_process = []
+            for tile in self.tiles_to_process:
+                for tile_new in os.listdir(self.data_src):
+                    if tile_new.split('_flatten')[0] == tile.split('.' + self.file_format)[0]:
+                        new_tiles_to_process.append(tile_new)
+            if len(self.tiles_to_process) != len(new_tiles_to_process):
+                raise ValueError("Could not find all the corresponding flatten tiles to the original ones")
+            original_tiles_to_process = self.tiles_to_process
+            self.tiles_to_process = new_tiles_to_process
 
         # creates pack of samples to infer on
         if self.inference.num_tiles_per_inference > 1:
@@ -399,12 +458,6 @@ class Pipeline():
                 list_pack_of_tiles.append(self.tiles_to_process[(len(list_pack_of_tiles)*self.inference.num_tiles_per_inference)::])
         else:
             list_pack_of_tiles = [[x] for x in self.tiles_to_process]
-        # for _, pack in tqdm(enumerate(list_pack_of_tiles), total=len(list_pack_of_tiles), desc="Processing"):
-        #     if verbose:
-        #         print("===\tProcessing files: ")
-        #         for file in pack:
-        #             print("\t", file)
-        #         print("===")
 
         for _, pack in tqdm(enumerate(list_pack_of_tiles), total=len(list_pack_of_tiles), desc="Processing"):
             if verbose:
@@ -417,13 +470,11 @@ class Pipeline():
             if os.path.exists(temp_seg_src):
                 shutil.rmtree(temp_seg_src)
             os.mkdir(temp_seg_src)
-                
+
             # copy files to temp folder
             for file in pack:
                 original_file_src = os.path.join(self.result_pseudo_labels_dir, self.data_src, file)
-                # original_file_src = os.path.join(self.data_dest, file)
                 temp_file_src = os.path.join(temp_seg_src, file)
-                # print(temp_file_src)
                 shutil.copyfile(original_file_src, temp_file_src)
 
             return_code = self.run_subprocess(
@@ -451,68 +502,8 @@ class Pipeline():
                     delete_zip=True
                     )
 
-                # # check if empty
-                # src_pred_file = os.path.join(self.preds_src, file.split('.')[0] + '_out.' + self.file_format)
-                # tile = laspy.read(src_pred_file)
-                # num_instances = len(set(tile.PredInstance))
-                # if num_instances == 1:
-                #     if verbose:
-                #         print(f"Empty tile: {file}")
-                #     self.empty_tiles.append(file)
-                #     if self.classification.processes.do_remove_empty_tiles:
-                #         os.remove(os.path.join(src_pred_file))
-                #         # if file in self.tiles_to_process:
-                #         #     self.tiles_to_process.remove(file)
                 if verbose:
                     print("Segmentation done!")
-        # # loops on samples:
-        # for _, file in tqdm(enumerate(self.tiles_to_process), total=len(self.tiles_to_process), desc="Processing"):
-        #     if verbose:
-        #         print("===\tProcessing file: ", file, "\t===")
-        #     # original_file_src = os.path.join(os.path.join(self.root_src, self.data_src, file))
-        #     original_file_src = os.path.join(self.result_pseudo_labels_dir, self.data_src, file)
-        #     temp_file_src = os.path.join(os.path.join(temp_seg_src, file))
-        #     shutil.copyfile(
-        #         original_file_src,
-        #         temp_file_src,
-        #     )
-            
-        #     return_code = self.run_subprocess(
-        #         src_script=self.segmenter_root_src,
-        #         script_name="./run_oracle_pipeline.sh",
-        #         params= [temp_seg_src, temp_seg_src],
-        #         verbose=verbose
-        #         )
-        
-        #     # catch errors
-        #     if return_code != 0:
-        #         if verbose:
-        #             print(f"Problem with tile {file}")
-        #         self.problematic_tiles.append(file)
-        #     else:
-        #         # unzip results
-        #         if verbose:
-        #             print("Unzipping results...")
-        #         self.unzip_laz_files(
-        #             zip_path=os.path.join(temp_seg_src, "results.zip"),
-        #             extract_to=self.preds_src,
-        #             delete_zip=True
-        #             )
-
-        #         # check if empty
-        #         src_pred_file = os.path.join(self.preds_src, file.split('.')[0] + '_out.' + self.file_format)
-        #         tile = laspy.read(src_pred_file)
-        #         num_instances = len(set(tile.PredInstance))
-        #         if num_instances == 1:
-        #             if verbose:
-        #                 print(f"Empty tile: {file}")
-        #             self.empty_tiles.append(file)
-        #             if self.classification.processes.do_remove_empty_tiles:
-        #                 os.remove(os.path.join(src_pred_file))
-        #                 # if file in self.tiles_to_process:
-        #                 #     self.tiles_to_process.remove(file)
-        #         if verbose:
-        #             print("Segmentation done!")
 
         # removing temp file
         os.remove(temp_file_src)
@@ -540,6 +531,93 @@ class Pipeline():
             for f in self.empty_tiles:
                 print("\t- ", f)
                 self.inference_metrics.loc[(self.inference_metrics.name == f) & (self.inference_metrics.num_loop == self.current_loop), "is_empty"] = 1
+
+        
+        if self.do_flatten:
+            # reorder predictions, transfert preds to originals and replace flatten with originals
+            for id_tile, tile_flatten in enumerate(self.tiles_to_process):
+                laz_flatten = laspy.read(os.path.join(self.data_src, tile_flatten))
+                laz_preds = laspy.read(os.path.join(self.preds_src, tile_flatten.split(".laz")[0] +"_out.laz"))
+                laz_original = laspy.read(os.path.join(original_tiles_src, original_tiles_to_process[id_tile]))
+                self.match_pointclouds(laz_flatten, laz_preds)
+                # os.rename(
+                #     os.path.join(self.preds_src, tile_flatten.split(".laz")[0] +"_out.laz"),
+                #     os.path.join(self.preds_src, original_tiles_to_process[id_tile].split(".laz")[0] +"_out.laz")
+                # )
+                for new_col_name in ["PredInstance", "PredSemantic"]:
+                    if new_col_name not in list(laz_original.point_format.dimension_names):
+                        new_col = laspy.ExtraBytesParams(name=new_col_name, type=np.uint16)
+                        laz_original.add_extra_dim(new_col)
+                    laz_original[new_col_name] = laz_preds[new_col_name]
+
+                laz_original.write(os.path.join(original_tiles_src, original_tiles_to_process[id_tile]))
+
+                # # if "PredInstance" not in 
+                # # Pred_instance = laspy.ExtraBytesParams(name="PredInstance", type=np.uint16)
+                # # Pred_semantic = laspy.ExtraBytesParams(name="PredSemantic", type=np.uint8)
+                # # laz_original.add_extra_dim(Pred_instance)
+                # # laz_original.add_extra_dim(Pred_semantic)
+                # print(list(laz_original.point_format.dimension_names))
+                # print(list(laz_preds.point_format.dimension_names))
+                # print(os.path.join(self.preds_src, tile_flatten.split(".laz")[0] +"_out.laz"))
+                # print(os.path.join(original_tiles_src, original_tiles_to_process[id_tile]))
+                # laz_original['PredInstance'] = laz_preds['PredInstance']
+                # laz_original['PredSemantic'] = laz_preds['PredSemantic']
+                # laz_original.write(os.path.join(original_tiles_src, original_tiles_to_process[id_tile]))
+            # quit()
+            self.data_src = self.data_src.split('/flatten')[0]
+            self.tiles_to_process = original_tiles_to_process
+
+            # replace flatten preds with original tiles with preds
+            shutil.rmtree(self.preds_src)
+            os.makedirs(self.preds_src)
+            for tile in self.tiles_to_process:
+                shutil.copyfile(
+                    os.path.join(self.data_src, tile),
+                    os.path.join(self.preds_src, tile.split('.laz')[0] + '_out.laz'),
+                )
+
+        # quit()
+
+        # if self.do_flatten:
+        #     # reorder predictions, transfert preds to originals and replace flatten with originals
+        #     for id_tile, tile_flatten in enumerate(self.tiles_to_process):
+        #         laz_flatten = laspy.read(os.path.join(self.data_src, tile_flatten))
+        #         laz_preds = laspy.read(os.path.join(self.preds_src, tile_flatten.split(".laz")[0] +"_out.laz"))
+        #         laz_original = laspy.read(os.path.join(original_tiles_src, original_tiles_to_process[id_tile]))
+        #         self.match_pointclouds(laz_flatten, laz_preds)
+        #         os.rename(
+        #             os.path.join(self.preds_src, tile_flatten.split(".laz")[0] +"_out.laz"),
+        #             os.path.join(self.preds_src, original_tiles_to_process[id_tile].split(".laz")[0] +"_out.laz")
+        #         )
+        #         for new_col_name in ["PredInstance", "PredSemantic"]:
+        #             if new_col_name not in list(laz_original.point_format.dimension_names):
+        #                 new_col = laspy.ExtraBytesParams(name=new_col_name, type=np.uint16)
+        #                 laz_original.add_extra_dim(new_col)
+
+        #         # # if "PredInstance" not in 
+        #         # # Pred_instance = laspy.ExtraBytesParams(name="PredInstance", type=np.uint16)
+        #         # # Pred_semantic = laspy.ExtraBytesParams(name="PredSemantic", type=np.uint8)
+        #         # # laz_original.add_extra_dim(Pred_instance)
+        #         # # laz_original.add_extra_dim(Pred_semantic)
+        #         # print(list(laz_original.point_format.dimension_names))
+        #         # print(list(laz_preds.point_format.dimension_names))
+        #         # print(os.path.join(self.preds_src, tile_flatten.split(".laz")[0] +"_out.laz"))
+        #         # print(os.path.join(original_tiles_src, original_tiles_to_process[id_tile]))
+        #         # laz_original['PredInstance'] = laz_preds['PredInstance']
+        #         # laz_original['PredSemantic'] = laz_preds['PredSemantic']
+        #         # laz_original.write(os.path.join(original_tiles_src, original_tiles_to_process[id_tile]))
+        #         # quit()
+        #     self.data_src = self.data_src.split('/flatten')[0]
+        #     self.tiles_to_process = original_tiles_to_process
+
+        #     shutil.rmtree(self.preds_src)
+        #     os.makedirs(self.preds_src)
+        #     for tile in self.tiles_to_process:
+        #         shutil.copyfile(
+        #             os.path.join(self.data_src, tile),
+        #             os.path.join(self.preds_src, tile.split('.laz')[0] + '_out.laz'),
+        #         )
     
     def classify(self, verbose=False):
         print("Starting classification:")
@@ -904,23 +982,29 @@ class Pipeline():
         os.makedirs(location_src, exist_ok=True)
         
         show_global_metrics(
-            src_data=self.training_metrics_src,
+            data_src=self.training_metrics_src,
             src_location=os.path.join(location_src, 'training_metrics.png'),
             show_figure=False,
             save_figure=True,
             )
         show_inference_counts(
-            self.inference_metrics_src,
+            data_src=self.inference_metrics_src,
             src_location=os.path.join(location_src, 'inference_count.png'),
             show_figure=False,
             save_figure=True,
             )
         show_inference_metrics(
-            self.inference_metrics_src,
+            data_src=self.inference_metrics_src,
             src_location=os.path.join(location_src, 'inference_metrics.png'),
             show_figure=False,
             save_figure=True,
             )
+        show_pseudo_labels_evolution(
+            data_folder=self.result_dir,
+            src_location=os.path.join(location_src, 'pseudo_labels.png'),
+            show_figure=False,
+            save_figure=True,
+        )
 
     def test(self):
         # test if enough tiles available

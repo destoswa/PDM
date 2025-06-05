@@ -15,6 +15,7 @@ tiles_loader:
     tree_list: [10, 5, 1]  # if method=tree, number of samples per levele
     do_remove_empties: True # use of the classifier to remove the tiles that have no predictions classified as tree
   evaluate:
-    run_src: results/trainings_saved/fake_run_for_testing
+    run_src: results/trainings_saved/20250601_142133_with_instance_splitting
     cluster_src: data/full_dataset/all_tiles/dataset_full_100m
     cluster_csv_path: data/full_dataset/selection/clustered.csv
+    
