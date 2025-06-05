@@ -8,7 +8,7 @@ segmenter:
     data_train: data/FORinstance_dataset
     config_data_src: /home/pdm/models/SegmentAnyTree/conf/data/panoptic/treeins_rad8.yaml
     config_results_src: /home/pdm/models/SegmentAnyTree/conf/hydra/output/custom.yaml
-    batch_size: 1
+    batch_size: 16
     num_epochs_per_loop: 3
     sample_per_epoch: 100
 
