@@ -1,8 +1,8 @@
 pipeline:
   root_src: /home/pdm
   results_root_src: results/trainings
-  result_src_name_suffixe: training_from_initial_model
-  num_loops: 2
+  result_src_name_suffixe: training_with_big_batch_size
+  num_loops: 5
   train_frac: 0.7
   val_frac: 0.15
   test_frac: 0.15
@@ -15,4 +15,6 @@ pipeline:
     src_floors: /home/pdm/data/dataset_pipeline/tiles_20/floors
   preload:
     do_continue_from_existing: False
-    src_existing: /home/pdm/results/trainings/20250601_142133_with_instance_splitting
+    src_existing: /home/pdm/results/trainings/20250602_175711_training_from_initial_model
+  debugging:
+    keep_previous_data: False

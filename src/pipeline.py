@@ -92,6 +92,10 @@ class Pipeline():
         self.result_current_loop_dir = os.path.join(self.result_dir, str(self.current_loop))
         self.result_pseudo_labels_dir = os.path.join(self.result_dir, 'pseudo_labels/')
 
+        #   _remove data processes if necessary
+        if not cfg.pipeline.debugging.keep_previous_data:
+            shutil.rmtree(os.path.join(self.data_src, 'loops'))
+
         # update model to use if starting from existing pipeline
         if self.do_continue_from_existing:
             self.model_checkpoint_src = os.path.join(self.result_dir, str(self.current_loop - 1))
@@ -794,23 +798,24 @@ class Pipeline():
                         
                         # get intersection
                         intersection_mask = mask & other_tree_mask
-                        # intersection = np.vstack((new_file_x[intersection_mask], new_file_y[intersection_mask], new_file_z[intersection_mask]))
-                        intersection = np.concatenate((new_file_x, new_file_y), axis=1)[intersection_mask]
-                        if verbose:
-                            print(f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)}")
-                        self.log += f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)} \n"
+                        if np.sum(intersection_mask) > 1:
+                            # intersection = np.vstack((new_file_x[intersection_mask], new_file_y[intersection_mask], new_file_z[intersection_mask]))
+                            intersection = np.concatenate((new_file_x, new_file_y), axis=1)[intersection_mask]
+                            if verbose:
+                                print(f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)}")
+                            self.log += f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)} \n"
 
-                        # check radius of intersection
-                        intersection_pca = Pipeline.transform_with_pca(intersection)
-                        small_range = np.max(intersection_pca[:,1]) - np.min(intersection_pca[:,1])
-                        if small_range > 2:
-                        # range_x = np.min(intersection[0,:]) - np.max(intersection[0,:])
-                        # range_y = np.min(intersection[1,:]) - np.max(intersection[1,:])
-                        # range_z = np.min(intersection[2,:]) - np.max(intersection[2,:])
-                        # if range_x > 4 or range_y > 4 or range_z > 4:
-                            is_new_tree = False
-                            dict_reasons_of_rejection["overlapping_greater_than_2"] += 1
-                            # break
+                            # check radius of intersection
+                            intersection_pca = Pipeline.transform_with_pca(intersection)
+                            small_range = np.max(intersection_pca[:,1]) - np.min(intersection_pca[:,1])
+                            if small_range > 2:
+                            # range_x = np.min(intersection[0,:]) - np.max(intersection[0,:])
+                            # range_y = np.min(intersection[1,:]) - np.max(intersection[1,:])
+                            # range_z = np.min(intersection[2,:]) - np.max(intersection[2,:])
+                            # if range_x > 4 or range_y > 4 or range_z > 4:
+                                is_new_tree = False
+                                dict_reasons_of_rejection["overlapping_greater_than_2"] += 1
+                                # break
 
                         # intersection over new tree
                         if np.sum(intersection_mask) / np.sum(mask) > 0.7:
@@ -830,13 +835,13 @@ class Pipeline():
                         print("Length of corresponding instances: ", len(set(corresponding_instances)))
                     if len(set(corresponding_instances)) > 1:
                         for instance in set(corresponding_instances):
-                            if instance == 0 or len:
+                            if instance == 0:
                                 continue
                             dict_reasons_of_rejection["splitting_using_pca"] += 1
                             other_tree_mask = new_file.treeID == instance
                             intersection_mask = mask & other_tree_mask
 
-                            if len(intersection_mask) > 1:
+                            if np.sum(intersection_mask) > 1:
                                 mask, new_other_tree_mask = Pipeline.split_instances(new_file, mask, other_tree_mask)
                         
                             # test if trees are still recognisable
@@ -956,6 +961,7 @@ class Pipeline():
 
         # run training script
         model_checkpoint = self.model_checkpoint_src if self.model_checkpoint_src != None else "/home/pdm/models/SegmentAnyTree/model_file"
+        # model_checkpoint = "/home/pdm/models/SegmentAnyTree/model_file"
         # print(self.model_checkpoint_src)
         # print(model_checkpoint)
         self.run_subprocess(
@@ -972,8 +978,7 @@ class Pipeline():
             )
         
         # update path to checkpoint
-        # self.model_checkpoint_src = os.path.join(self.training.result_training_dir, str(self.current_loop))
-        # self.model_checkpoint_src = self.result_current_loop_dir
+        self.model_checkpoint_src = self.result_current_loop_dir
 
     def visualization(self):
         print("Saving metrics visualizations")

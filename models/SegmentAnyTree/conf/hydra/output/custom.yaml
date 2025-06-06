@@ -1,3 +1,3 @@
 hydra:
   run:
-    dir: ../../results/trainings/20250601_142133_with_instance_splitting/0
+    dir: ../../results/trainings/20250605_094139_training_with_big_batch_size/1
