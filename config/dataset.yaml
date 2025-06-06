@@ -1,4 +1,4 @@
 dataset:
   project_root_src: /home/pdm/
-  data_src: data/dataset_pipeline/tiles_20_flatten
+  data_src: data/flattening_corrections/test
   file_format: laz

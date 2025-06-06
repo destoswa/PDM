@@ -114,7 +114,10 @@ def pandas_to_las(csv, csv_file_provided=False, output_file_path=None, do_compre
     las_file.Z = (df['Z'] - offset[2]) / scale[2]
 
     # add standard columns to the las file with the correct data types
+    # df = df.fillna(0)
     for column in columns_which_match:
+        # print(column)
+        # print(df[df[column].isna()])
         las_file[column] = df[column].astype(standard_columns_with_data_types[column])
 
     # add extra columns to the las file with the correct data types

@@ -32,10 +32,10 @@ def flattening_tile(tile_src, grid_size=10, verbose=True):
     # load file
     laz = laspy.read(tile_src)
     init_len = len(laz)
-    remove_duplicates(laz)
+    # remove_duplicates(laz)
     if verbose:
         print(f"Removing duplicates: From {init_len} to {len(laz)}")
-    laz.write(tile_src)
+    # laz.write(tile_src)
     points = np.vstack((laz.x, laz.y, laz.z)).T
     points_flatten = copy.deepcopy(points)
     points_interpolated = copy.deepcopy(points)
