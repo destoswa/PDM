@@ -85,6 +85,7 @@ def main(cfg):
         pipeline.result_current_loop_dir = os.path.join(pipeline.result_dir, str(loop))
 
         # prepare architecture
+        os.makedirs(pipeline.result_current_loop_dir, exist_ok=True)
         # os.makedirs(os.path.join(DATA_SRC, f'loops/{loop}/'), exist_ok=True)
 
         # shutil.copytree(DATA_SRC, os.path.join(DATA_SRC, f'loops/{loop}'))

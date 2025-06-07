@@ -93,7 +93,7 @@ class Pipeline():
         self.result_pseudo_labels_dir = os.path.join(self.result_dir, 'pseudo_labels/')
 
         #   _remove data processes if necessary
-        if not cfg.pipeline.debugging.keep_previous_data:
+        if not cfg.pipeline.debugging.keep_previous_data and not cfg.pipeline.preload.do_continue_from_existing:
             shutil.rmtree(os.path.join(self.data_src, 'loops'))
 
         # update model to use if starting from existing pipeline
