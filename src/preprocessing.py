@@ -27,12 +27,35 @@ def remove_duplicates(laz_file):
     # Remove the dupplicates from the file
     laz_file.points = laz_file.points[mask]
 
+def remove_duplicates_v2(laz_file):
+    # Round coordinates to 2 decimals and stack into Nx3 array
+    coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)).T, 2)
+
+    # Build KDTree and find pairs of close points (within 1 cm)
+    tree = cKDTree(coords)
+    pairs = tree.query_pairs(1e-2)  # 1 cm tolerance
+
+    # Create boolean mask: keep first occurrence, drop the second
+    mask = np.ones(len(coords), dtype=bool)
+    for i, j in pairs:
+        mask[j] = False
+
+    # Create new LAS object
+    header = laspy.LasHeader(point_format=laz_file.header.point_format, version=laz_file.header.version)
+    header.point_count = 0
+    new_las = laspy.LasData(header)
+
+    # Copy all dimensions with the mask applied
+    for dim in laz_file.point_format.dimension_names:
+        setattr(new_las, dim, getattr(laz_file, dim)[mask])
+
+    return new_las
 
 def flattening_tile(tile_src, grid_size=10, verbose=True):
     # load file
     laz = laspy.read(tile_src)
     init_len = len(laz)
-    remove_duplicates(laz)
+    laz = remove_duplicates_v2(laz)
     if verbose:
         print(f"Removing duplicates: From {init_len} to {len(laz)}")
     laz.write(tile_src)
@@ -111,7 +134,9 @@ def flattening_tile(tile_src, grid_size=10, verbose=True):
 
     filtered_points = {dim: getattr(laz, dim)[mask_valid] for dim in laz.point_format.dimension_names}
     header = laspy.LasHeader(point_format=laz.header.point_format, version=laz.header.version)
+    header.point_count = 0
     new_las = laspy.LasData(header)
+
 
     #   _Assign filtered and modified data
     for dim, values in filtered_points.items():

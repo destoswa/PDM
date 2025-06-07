@@ -93,13 +93,12 @@ class Pipeline():
         self.result_pseudo_labels_dir = os.path.join(self.result_dir, 'pseudo_labels/')
 
         #   _remove data processes if necessary
-        if not cfg.pipeline.debugging.keep_previous_data and not cfg.pipeline.preload.do_continue_from_existing:
+        if not cfg.pipeline.debugging.keep_previous_data and not cfg.pipeline.preload.do_continue_from_existing and os.path.exists(os.path.join(self.data_src, 'loops')):
             shutil.rmtree(os.path.join(self.data_src, 'loops'))
 
         # update model to use if starting from existing pipeline
         if self.do_continue_from_existing:
-            pass
-            # self.model_checkpoint_src = os.path.join(self.result_dir, str(self.current_loop - 1))
+            self.model_checkpoint_src = os.path.join(self.result_dir, str(self.current_loop - 1))
 
         os.makedirs(self.result_dir, exist_ok=True)
         os.makedirs(self.result_pseudo_labels_dir, exist_ok=True)
@@ -306,46 +305,46 @@ class Pipeline():
         
         return maskA, maskB
 
-    @staticmethod
-    def match_pointclouds(laz1, laz2):
-        """Sort laz2 to match the order of laz1 without changing laz1's order.
+    # @staticmethod
+    # def match_pointclouds(laz1, laz2):
+    #     """Sort laz2 to match the order of laz1 without changing laz1's order.
 
-        Args:
-            laz1: laspy.LasData object (reference order)
-            laz2: laspy.LasData object (to be sorted)
+    #     Args:
+    #         laz1: laspy.LasData object (reference order)
+    #         laz2: laspy.LasData object (to be sorted)
         
-        Returns:
-            laz2 sorted to match laz1
-        """
-        # Retrieve and round coordinates for robust matching
-        coords_1 = np.round(np.vstack((laz1.x, laz1.y, laz1.z)), 2).T
-        coords_2 = np.round(np.vstack((laz2.x, laz2.y, laz2.z)), 2).T
+    #     Returns:
+    #         laz2 sorted to match laz1
+    #     """
+    #     # Retrieve and round coordinates for robust matching
+    #     coords_1 = np.round(np.vstack((laz1.x, laz1.y, laz1.z)), 2).T
+    #     coords_2 = np.round(np.vstack((laz2.x, laz2.y, laz2.z)), 2).T
 
-        # Verify laz2 is of the same size as laz1
-        assert len(coords_2) == len(coords_1), "laz2 should be a subset of laz1"
+    #     # Verify laz2 is of the same size as laz1
+    #     assert len(coords_2) == len(coords_1), "laz2 should be a subset of laz1"
 
-        # Create a dictionary mapping from coordinates to indices
-        coord_to_idx = {tuple(coord): idx for idx, coord in enumerate(coords_1)}
+    #     # Create a dictionary mapping from coordinates to indices
+    #     coord_to_idx = {tuple(coord): idx for idx, coord in enumerate(coords_1)}
 
-        # Find indices in laz1 that correspond to laz2
-        matching_indices = []
-        failed = 0
-        for coord in coords_2:
-            try:
-                matching_indices.append(coord_to_idx[tuple(coord)])
-            except Exception as e:
-                failed += 1
-        # print(f"Number of non-matching points: {failed}")
+    #     # Find indices in laz1 that correspond to laz2
+    #     matching_indices = []
+    #     failed = 0
+    #     for coord in coords_2:
+    #         try:
+    #             matching_indices.append(coord_to_idx[tuple(coord)])
+    #         except Exception as e:
+    #             failed += 1
+    #     # print(f"Number of non-matching points: {failed}")
 
-        matching_indices = np.array([coord_to_idx[tuple(coord)] for coord in coords_2])
+    #     matching_indices = np.array([coord_to_idx[tuple(coord)] for coord in coords_2])
 
-        # Sort laz2 to match laz1
-        sorted_indices = np.argsort(matching_indices)
+    #     # Sort laz2 to match laz1
+    #     sorted_indices = np.argsort(matching_indices)
 
-        # Apply sorting to all attributes of laz2
-        laz2.points = laz2.points[sorted_indices]
+    #     # Apply sorting to all attributes of laz2
+    #     laz2.points = laz2.points[sorted_indices]
 
-        return laz2  # Now sorted to match laz1
+    #     return laz2  # Now sorted to match laz1
 
     def run_subprocess(self, src_script, script_name, add_to_log=True, params=None, verbose=True):
         # go at the root of the segmenter
@@ -466,10 +465,10 @@ class Pipeline():
                     print("\t", file)
                 print("===")
 
-            # create / reset temp folder
-            if os.path.exists(temp_seg_src):
-                shutil.rmtree(temp_seg_src)
-            os.mkdir(temp_seg_src)
+            # # create / reset temp folder
+            # if os.path.exists(temp_seg_src):
+            #     shutil.rmtree(temp_seg_src)
+            # os.mkdir(temp_seg_src)
 
             # copy files to temp folder
             for file in pack:
@@ -504,9 +503,7 @@ class Pipeline():
 
                 if verbose:
                     print("Segmentation done!")
-
-        # removing temp file
-        os.remove(temp_file_src)
+            break
 
         # update tiles to process
         for tile in self.problematic_tiles:
@@ -539,6 +536,12 @@ class Pipeline():
                 laz_flatten = laspy.read(os.path.join(self.data_src, tile_flatten))
                 laz_preds = laspy.read(os.path.join(self.preds_src, tile_flatten.split(".laz")[0] +"_out.laz"))
                 laz_original = laspy.read(os.path.join(original_tiles_src, original_tiles_to_process[id_tile]))
+                # print(len(laz_preds))
+                # self.remove_duplicates(laz_preds)
+                print(len(laz_preds))
+                print(len(laz_flatten))
+                print(len(laz_original))
+                # quit()
                 self.match_pointclouds(laz_flatten, laz_preds)
                 # os.rename(
                 #     os.path.join(self.preds_src, tile_flatten.split(".laz")[0] +"_out.laz"),

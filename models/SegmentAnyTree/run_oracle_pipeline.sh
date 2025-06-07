@@ -17,9 +17,13 @@ DEBUG_MODE=true
 #     PATH_DATA='/home/nibio/mutable-outsidPATH_DATA
 
 PATH_DATA='/home/datascience'
+PATH_NIBIO='/home/nibio'
 # re
 if [ -d "$PATH_DATA" ]; then
     rm -rf "$PATH_DATA"
+fi
+if [ -d "$PATH_NIBIO" ]; then
+    rm -rf "$PATH_NIBIO"
 fi
 
 # Set the input and output folders in the oracle

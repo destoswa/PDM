@@ -298,7 +298,6 @@ class Trainer:
             for i in range(voting_runs):
                 with Ctq(loader) as tq_loader:
                     for data in tq_loader:
-                    # for _, data in tqdm(enumerate(loader)):
                         with torch.no_grad():
                             self._model.set_input(data, self._device)
                             with torch.cuda.amp.autocast(enabled=self._model.is_mixed_precision()):

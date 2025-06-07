@@ -69,15 +69,15 @@ def main(cfg):
     if DO_REMOVE_HANGING_POINTS:
         pass
 
-    # if DO_FLATTEN:
-    #     flattening(DATA_SRC)
+    if DO_FLATTEN:
+        flattening(DATA_SRC)
+        # quit()
 
 
     # create pipeline
     pipeline = Pipeline(cfg) 
 
     # start looping
-    # shutil.rmtree(os.path.join(DATA_SRC, 'loops/'))
     for loop in range(pipeline.current_loop, NUM_LOOPS):
         print(f"===== LOOP {loop + 1} / {NUM_LOOPS} =====")
         time_start_loop = time()
@@ -85,10 +85,14 @@ def main(cfg):
         pipeline.result_current_loop_dir = os.path.join(pipeline.result_dir, str(loop))
 
         # prepare architecture
-        os.makedirs(pipeline.result_current_loop_dir, exist_ok=True)
-        # os.makedirs(os.path.join(DATA_SRC, f'loops/{loop}/'), exist_ok=True)
+        os.makedirs(os.path.join(DATA_SRC, f'loops/{loop}/'), exist_ok=True)
+        
+        list_tiles = [x for x in os.listdir(DATA_SRC) if x.endswith(pipeline.file_format)]
+        for tile in list_tiles:
+            shutil.copyfile(os.path.join(DATA_SRC, tile), os.path.join(DATA_SRC, f"loops/{loop}", tile))
 
-        # shutil.copytree(DATA_SRC, os.path.join(DATA_SRC, f'loops/{loop}'))
+        if DO_FLATTEN:
+            shutil.copytree(os.path.join(DATA_SRC, 'flatten'), os.path.join(DATA_SRC, f'loops/{loop}/flatten'))
 
         pipeline.data_src = os.path.join(DATA_SRC, f'loops/{loop}/')
         pipeline.preds_src = os.path.join(pipeline.data_src, 'preds')
@@ -119,9 +123,8 @@ def main(cfg):
         # print("done")
 
         # segment
-        if loop > 0:
-            pipeline.segment(verbose=False)
-            pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
+        pipeline.segment(verbose=True)
+        # pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
 
 
         # pipeline.problematic_tiles = ["color_grp_full_tile_4.laz", "color_grp_full_tile_7.laz", "color_grp_full_tile_12.laz", "color_grp_full_tile_10.laz"]
@@ -149,8 +152,8 @@ def main(cfg):
         # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
         
         # classify
-        pipeline.classify(verbose=False)
-        pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
+        pipeline.classify(verbose=True)
+        # pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
         # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
 
         # create pseudo-labels
