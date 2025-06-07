@@ -11,7 +11,7 @@ pipeline:
     garbage_as_grey: True
     save_pseudo_labels_per_loop: True
     do_remove_hanging_points: True
-    do_flatten: True
+    do_flatten: False
     src_floors: /home/pdm/data/dataset_pipeline/tiles_20/floors
   preload:
     do_continue_from_existing: False

@@ -93,7 +93,7 @@ class Pipeline():
         self.result_pseudo_labels_dir = os.path.join(self.result_dir, 'pseudo_labels/')
 
         #   _remove data processes if necessary
-        if not cfg.pipeline.debugging.keep_previous_data:
+        if not cfg.pipeline.debugging.keep_previous_data and os.path.exists(os.path.join(self.data_src, 'loops')):
             shutil.rmtree(os.path.join(self.data_src, 'loops'))
 
         # update model to use if starting from existing pipeline
@@ -465,10 +465,10 @@ class Pipeline():
                     print("\t", file)
                 print("===")
 
-            # create / reset temp folder
-            if os.path.exists(temp_seg_src):
-                shutil.rmtree(temp_seg_src)
-            os.mkdir(temp_seg_src)
+            # # create / reset temp folder
+            # if os.path.exists(temp_seg_src):
+            #     shutil.rmtree(temp_seg_src)
+            # os.mkdir(temp_seg_src)
 
             # copy files to temp folder
             for file in pack:
@@ -504,9 +504,6 @@ class Pipeline():
                 if verbose:
                     print("Segmentation done!")
             break
-
-        # removing temp file
-        os.remove(temp_file_src)
 
         # update tiles to process
         for tile in self.problematic_tiles:

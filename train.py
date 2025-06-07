@@ -78,7 +78,6 @@ def main(cfg):
     pipeline = Pipeline(cfg) 
 
     # start looping
-    shutil.rmtree(os.path.join(DATA_SRC, 'loops/'))
     for loop in range(pipeline.current_loop, NUM_LOOPS):
         print(f"===== LOOP {loop + 1} / {NUM_LOOPS} =====")
         time_start_loop = time()
