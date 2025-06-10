@@ -10,6 +10,9 @@ if ENV == "pdal_env":
 import concurrent.futures
 from functools import partial
 
+
+import psutil
+
 class Convertions:
     @staticmethod
     def convert_laz_to_las(in_laz, out_las, verbose=True):
@@ -87,6 +90,7 @@ class Convertions:
         f.close()
         if verbose:
             print(f"PCD file saved in {out_pcd}")
+            print(f"\tRAM usage: {psutil.virtual_memory().percent}\%")
 
 
 # Parallelized conversion function (not used at the moment.. not working well with I/O operations)

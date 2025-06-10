@@ -1,7 +1,7 @@
 pipeline:
   root_src: /home/pdm
   results_root_src: results/trainings
-  result_src_name_suffixe: training_with_big_batch_size
+  result_src_name_suffixe: training_with_flattening
   num_loops: 5
   train_frac: 0.7
   val_frac: 0.15
@@ -11,10 +11,10 @@ pipeline:
     garbage_as_grey: True
     save_pseudo_labels_per_loop: True
     do_remove_hanging_points: True
-    do_flatten: False
+    do_flatten: True
     src_floors: /home/pdm/data/dataset_pipeline/tiles_20/floors
   preload:
-    do_continue_from_existing: True
+    do_continue_from_existing: False
     src_existing: /home/pdm/results/trainings/20250605_094139_training_with_big_batch_size
   debugging:
-    keep_previous_data: False
+    keep_previous_data: True

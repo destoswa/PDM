@@ -503,7 +503,6 @@ class Pipeline():
 
                 if verbose:
                     print("Segmentation done!")
-            break
 
         # update tiles to process
         for tile in self.problematic_tiles:
@@ -572,7 +571,8 @@ class Pipeline():
             self.tiles_to_process = original_tiles_to_process
 
             # replace flatten preds with original tiles with preds
-            shutil.rmtree(self.preds_src)
+            # shutil.rmtree(self.preds_src)
+            os.rename(self.preds_src, self.pred_src + "_flatten")
             os.makedirs(self.preds_src)
             for tile in self.tiles_to_process:
                 shutil.copyfile(
@@ -628,6 +628,8 @@ class Pipeline():
         # loop on files:
         list_files = [f for f in os.listdir(self.preds_src) if f.endswith(self.file_format)]
         for _, file in tqdm(enumerate(list_files), total=len(list_files), desc="Processing"):
+            # if "321" not in file:
+            #     continue
             split_instance(os.path.join(self.preds_src, file), verbose=verbose)
 
             # convert instances to pcd
@@ -879,6 +881,38 @@ class Pipeline():
         for tile_name in list_tiles_pseudo_labels:
             if tile_name not in self.tiles_to_process:
                 os.remove(os.path.join(self.result_pseudo_labels_dir, tile_name))
+        
+        # If flatten, create a flatten version of the pseudo_labels
+        if self.do_flatten:
+            self.result_pseudo_labels_dir = self.result_pseudo_labels_dir + "_flatten"
+            os.makedirs(self.result_pseudo_labels_dir, exist_ok=True)
+
+            for flatten_tile in os.listdir(os.path.join(self.data_src, 'flatten')):
+                flatten_tile_src = os.path.join(self.result_pseudo_labels_dir, flatten_tile.split("_flatten")[0] + '.' + self.file_format)
+                if self.num_loops == 0:
+                    shutil.copyfile(
+                        os.path.join(self.data_src, flatten_tile),
+                        flatten_tile_src,
+                    )
+                flatten_file = laspy.read(flatten_tile_src)
+                original_file = laspy.read(os.path.join(self.data_src, flatten_tile))
+
+                if self.num_loops == 0:
+                    flatten_file.add_extra_dim(
+                        laspy.ExtraBytesParams(
+                            name='treeID',
+                            type="f4",
+                            description='Instance p-label'
+                        )
+                    )
+                
+                    # reset values of pseudo-labels
+                    flatten_file.classification = np.zeros(len(flatten_file), dtype="f4")
+                    flatten_file.treeID = np.zeros(len(flatten_file), dtype="f4")
+
+                new_file.__setattr__('classification', original_file.classification)
+                new_file.__setattr__('treeID', original_file.treeID)
+
 
     def process_row(self, coords_original_file_view, row_id):
         # Find matching points between original file and cluster
@@ -977,6 +1011,9 @@ class Pipeline():
         # update path to checkpoint
         self.model_checkpoint_src = self.result_current_loop_dir
 
+        if self.do_flatten:
+            self.result_pseudo_labels_dir = self.result_pseudo_labels_dir.split("_flatten")[0]
+
     def visualization(self):
         print("Saving metrics visualizations")
         
@@ -1008,44 +1045,6 @@ class Pipeline():
             show_figure=False,
             save_figure=True,
         )
-
-    def test(self):
-        # test if enough tiles available
-        # for type in ['train', 'test', 'val']:
-        #     if len([x for x in os.listdir(os.path.join(self.result_pseudo_labels_dir, 'treeinsfused/raw/pseudo_labels')) if x.split('.')[0].endswith(type)]) == 0:
-        #         raise InterruptedError(f"No {type} tilse for training process!!!")
-
-        print("Training:")
-        # modify dataset config file
-        # Pipeline.change_var_val_yaml(
-        #     src_yaml=self.training.config_data_src,
-        #     var='data/dataroot',
-        #     # val=os.path.join(self.result_pseudo_labels_dir),
-        #     val=os.path.join(self.result_pseudo_labels_dir),
-        # )
-
-        # # modify results directory
-        # Pipeline.change_var_val_yaml(
-        #     src_yaml=self.training.config_results_src,
-        #     var='hydra/run/dir',
-        #     # val="../../" + os.path.normpath(self.results_root_src) + "/" + self.result_src_name + '/' + str(self.current_loop),
-        #     val=self.result_current_loop_dir,
-        # )
-
-        # run training script
-        # model_checkpoint = self.model_checkpoint_src if self.model_checkpoint_src != "None" else "/home/pdm/models/SegmentAnyTree/model_file"
-        model_checkpoint = "/home/pdm/models/SegmentAnyTree/model_file"
-        self.run_subprocess(
-            src_script="/home/pdm/models/SegmentAnyTree/",
-            script_name="./run_pipeline.sh",
-            params= [self.training.num_epochs_per_loop, 
-                     self.training.batch_size, 
-                     self.training.sample_per_epoch,
-                     model_checkpoint,
-                     self.training_metrics_src,
-                     self.current_loop,
-                     ],
-            )
 
     def save_log(self, dest, clear_after=True, verbose=False):
         if verbose:
