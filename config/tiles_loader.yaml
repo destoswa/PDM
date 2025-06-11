@@ -1,14 +1,14 @@
 tiles_loader:
   root_src: /home/pdm
-  original_file_path: data/full_dataset_flat/color_grp_full_flat.las
-  results_destination: data/full_dataset/all_tiles/
+  original_file_path: data/dataset_pipeline/tiles_1/color_grp_full_tile_504.laz
+  results_destination: data/dataset_pipeline/tiles_1/results
   tiles_destination: ${tiles_loader.results_destination}/dataset_full_${tiles_loader.tiling.tile_size}m
   preprocess:
     do_remove_hanging_points: True
     do_flatten: True
     do_remove_duplicates: True
   tiling:
-    tile_size: 100
+    tile_size: 20
     pack_size: 1
   trimming:
     method: tree  # choose between {'drop', 'tree'}

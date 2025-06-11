@@ -253,7 +253,7 @@ class TilesLoader():
     # === METHODS OF THE TILES LOADER ===
     # ===================================
 
-    def tiling(self, verbose):
+    def tilling(self, verbose):
         if os.path.exists(self.data_dest):
             answer = None
             while answer not in ['y', 'yes', 'n', 'no', ""]:
@@ -733,10 +733,10 @@ if __name__ == "__main__":
     tiles_loader = TilesLoader(cfg)
 
     # list_to_drop = ["color_grp_full_tile_568.laz", "color_grp_full_tile_504.laz"]
-    list_to_drop = [x for x in os.listdir(os.path.join(cfg_tilesloader.tiles_loader.root_src, cfg_tilesloader.tiles_loader.evaluate.run_src, "pseudo_labels")) if x.endswith('.laz')]
+    # list_to_drop = [x for x in os.listdir(os.path.join(cfg_tilesloader.tiles_loader.root_src, cfg_tilesloader.tiles_loader.evaluate.run_src, "pseudo_labels")) if x.endswith('.laz')]
 
-    tiles_loader.evaluate(list_to_drop, verbose=True)
-    quit()
+    # tiles_loader.evaluate(list_to_drop, verbose=True)
+    # quit()
 
     if len(sys.argv) > 1:
 
@@ -744,15 +744,15 @@ if __name__ == "__main__":
         assert len(sys.argv) == 3
         mode = sys.argv[1]
         verbose = True if sys.argv[2].lower() == 'true' else False
-        assert mode in ["tiling", "trimming", "classification"]
+        assert mode in ["tilling", "trimming", "classification"]
         assert verbose in [True, False]
         
         # call function
         #print("Mode: ", mode, "\nverbose: ", verbose)
         #quit()
 
-        if mode == "tiling":
-            tiles_loader.tiling(verbose=verbose)
+        if mode == "tilling":
+            tiles_loader.tilling(verbose=verbose)
         elif mode == "trimming":
             tiles_loader.trimming(verbose=verbose)
         elif mode == "classification":
@@ -764,7 +764,7 @@ if __name__ == "__main__":
         quit()
     #tiles_loader.tiling()
     #tiles_loader.trimming(verbose=False)
-    tiles_loader.classify(verbose=True)
+    # tiles_loader.classify(verbose=True)
     
     delta_time = time.time() - time_start
     print(f"Process done in {delta_time} seconds")

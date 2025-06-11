@@ -13,52 +13,70 @@ from tqdm import tqdm
 from scipy.spatial import cKDTree
 
 
-def remove_duplicates(laz_file):
-    # Find pairs of points
-    coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)),2).T
-    tree_B = cKDTree(coords)
-    pairs = tree_B.query_pairs(1e-2)
+# def remove_duplicates(laz_file):
+#     # Find pairs of points
+#     coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)),2).T
+#     tree_B = cKDTree(coords)
+#     pairs = tree_B.query_pairs(1e-2)
 
-    # Create the mask with dupplicates
-    mask = [True for i in range(len(coords))]
-    for pair in pairs:
-        mask[pair[1]] = False
+#     # Create the mask with dupplicates
+#     mask = [True for i in range(len(coords))]
+#     for pair in pairs:
+#         mask[pair[1]] = False
 
-    # Remove the dupplicates from the file
-    laz_file.points = laz_file.points[mask]
+#     # Remove the dupplicates from the file
+#     laz_file.points = laz_file.points[mask]
 
-def remove_duplicates_v2(laz_file):
-    # Round coordinates to 2 decimals and stack into Nx3 array
-    coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)).T, 2)
+# def remove_duplicates(laz_file):
+#     # Round coordinates to 2 decimals and stack into Nx3 array
+#     coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)).T, 2)
 
-    # Build KDTree and find pairs of close points (within 1 cm)
-    tree = cKDTree(coords)
-    pairs = tree.query_pairs(1e-2)  # 1 cm tolerance
+#     # Build KDTree and find pairs of close points (within 1 cm)
+#     tree = cKDTree(coords)
+#     pairs = tree.query_pairs(1e-2)  # 1 cm tolerance
 
-    # Create boolean mask: keep first occurrence, drop the second
-    mask = np.ones(len(coords), dtype=bool)
-    for i, j in pairs:
-        mask[j] = False
+#     # Create boolean mask: keep first occurrence, drop the second
+#     mask = np.ones(len(coords), dtype=bool)
+#     for i, j in pairs:
+#         mask[j] = False
+
+#     # Create new LAS object
+#     header = laspy.LasHeader(point_format=laz_file.header.point_format, version=laz_file.header.version)
+#     header.point_count = 0
+#     new_las = laspy.LasData(header)
+
+#     # Copy all dimensions with the mask applied
+#     for dim in laz_file.point_format.dimension_names:
+#         setattr(new_las, dim, getattr(laz_file, dim)[mask])
+
+#     return new_las
+
+
+def remove_duplicates(laz_file, decimals=2):
+    coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)).T, decimals)
+    _, unique_indices = np.unique(coords, axis=0, return_index=True)
+    mask = np.zeros(len(coords), dtype=bool)
+    mask[unique_indices] = True
 
     # Create new LAS object
     header = laspy.LasHeader(point_format=laz_file.header.point_format, version=laz_file.header.version)
-    header.point_count = 0
     new_las = laspy.LasData(header)
 
-    # Copy all dimensions with the mask applied
     for dim in laz_file.point_format.dimension_names:
         setattr(new_las, dim, getattr(laz_file, dim)[mask])
 
     return new_las
 
-def flattening_tile(tile_src, grid_size=10, verbose=True):
+
+def flattening_tile(tile_src, tile_new_original_src, grid_size=10, verbose=True):
     # load file
     laz = laspy.read(tile_src)
     init_len = len(laz)
-    laz = remove_duplicates_v2(laz)
+    laz = remove_duplicates(laz)
     if verbose:
         print(f"Removing duplicates: From {init_len} to {len(laz)}")
-    laz.write(tile_src)
+    laz.write(tile_new_original_src)
+    
     points = np.vstack((laz.x, laz.y, laz.z)).T
     points_flatten = copy.deepcopy(points)
     points_interpolated = copy.deepcopy(points)
@@ -155,17 +173,18 @@ def flattening_tile(tile_src, grid_size=10, verbose=True):
 
     # Resize original file
     laz.points = laz.points[mask_valid]
-    laz.write(tile_src)
+    laz.write(tile_new_original_src)
     if verbose:
-        print("Saved file: ", tile_src)
+        print("Saved file: ", tile_new_original_src)
 
 
-def flattening(src_tiles, grid_size=10, verbose=True, verbose_full=False):
+def flattening(src_tiles, src_new_tiles, grid_size=10, verbose=True, verbose_full=False):
     print("Starting flattening:")
     list_tiles = [x for x in os.listdir(src_tiles) if x.endswith('.laz')]
     for _, tile in tqdm(enumerate(list_tiles), total=len(list_tiles), desc="Processing", disable=verbose==False):
         flattening_tile(
             tile_src=os.path.join(src_tiles, tile), 
+            tile_new_original_src=os.path.join(src_new_tiles, tile),
             grid_size=grid_size,
             verbose=verbose_full,
             )

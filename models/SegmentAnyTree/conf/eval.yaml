@@ -5,7 +5,7 @@ batch_size: 1
 cuda: 0
 weight_name: latest
 enable_cudnn: true
-checkpoint_dir: /home/pdm/models/SegmentAnyTree/model_file
+checkpoint_dir: /home/pdm/results/trainings/20250611_095825_training_with_flattening/3
 model_name: PointGroup-PAPER
 precompute_multi_scale: true
 enable_dropout: false

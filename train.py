@@ -58,6 +58,7 @@ def main(cfg):
     # processes
     DO_REMOVE_HANGING_POINTS = cfg.pipeline.processes.do_remove_hanging_points
     DO_FLATTEN = cfg.pipeline.processes.do_flatten
+    FLATTEN_TILE_SIZE = cfg.pipeline.processes.flatten_tile_size
 
     # assertions
     assert TRAIN_FRAC + TEST_FRAC + VAL_FRAC == 1.0
@@ -70,8 +71,9 @@ def main(cfg):
         pass
 
     if DO_FLATTEN:
-        flattening(DATA_SRC)
-        # quit()
+        os.makedirs(os.path.join(DATA_SRC, "originals"), exist_ok=True)
+        flattening(DATA_SRC, os.path.join(DATA_SRC, "originals"), FLATTEN_TILE_SIZE)
+
 
 
     # create pipeline
@@ -89,9 +91,14 @@ def main(cfg):
         
         list_tiles = [x for x in os.listdir(DATA_SRC) if x.endswith(pipeline.file_format)]
         for tile in list_tiles:
-            shutil.copyfile(os.path.join(DATA_SRC, tile), os.path.join(DATA_SRC, f"loops/{loop}", tile))
+            if DO_FLATTEN:
+                shutil.copyfile(os.path.join(DATA_SRC, 'originals', tile), os.path.join(DATA_SRC, f"loops/{loop}", tile))
+            else:
+                shutil.copyfile(os.path.join(DATA_SRC, tile), os.path.join(DATA_SRC, f"loops/{loop}", tile))
 
         if DO_FLATTEN:
+            if os.path.exists(os.path.join(DATA_SRC, f'loops/{loop}/flatten')):
+                shutil.rmtree(os.path.join(DATA_SRC, f'loops/{loop}/flatten'))
             shutil.copytree(os.path.join(DATA_SRC, 'flatten'), os.path.join(DATA_SRC, f'loops/{loop}/flatten'))
 
         pipeline.data_src = os.path.join(DATA_SRC, f'loops/{loop}/')

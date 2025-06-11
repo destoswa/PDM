@@ -21,7 +21,7 @@ def show_metric_over_epoch(df, metric_name, ax=None, save_figure=False, src_figu
     
     for stage in df.stage.unique():
         df_stage = df[df.stage == stage]
-        ax.plot(df_stage.num_epoch, df_stage[metric_name], label=stage)
+        ax.plot(np.array(df_stage.num_epoch), np.array(df_stage[metric_name]), label=stage)
 
     if save_figure:
         if src_figure != None and fig != None:
@@ -38,7 +38,7 @@ def show_metric_over_samples(df, metric_name, ax=None, save_figure=False, src_fi
     if ax == None:
         fig, ax = plt.figure()
     
-    ax.plot(df.index, df[metric_name])
+    ax.plot(np.array(df.index), np.array(df[metric_name]))
 
     if save_figure:
         if src_figure != None and fig != None:
@@ -83,22 +83,22 @@ def show_global_metrics(data_src, exclude_columns = ['num_loop', 'num_epoch', 's
 
 def show_inference_counts(data_src, src_location=None, show_figure=True, save_figure=False):
     df_data = pd.read_csv(data_src, sep=';')
-    print("DATA:\n", df_data.head())
     sums = df_data[["num_loop", "num_predictions", "num_garbage", "num_multi", "num_single"]].groupby('num_loop').sum()
     fractions = sums[["num_garbage", "num_multi", "num_single"]].div(sums["num_predictions"], axis=0)
     num_problematic = df_data[['num_loop', 'is_problematic']].groupby('num_loop').sum()
-    # print(num_problematic)
+
     num_empty = df_data[['num_loop', 'is_empty']].groupby('num_loop').sum()
     fig, axs = plt.subplots(2,2, figsize=(12,12))
-    sns.lineplot(data=sums.drop('num_predictions', axis=1), ax=axs[0,0])
-    sns.lineplot(data=fractions, ax=axs[0,1])
-    sns.lineplot(data=num_problematic, x="num_loop", y='is_problematic', ax=axs[1,0])
-    sns.lineplot(data=num_empty, x="num_loop", y='is_empty', ax=axs[1,1])
-    # sns.lineplot(data=num_empty, ax=axs[1,1])
-    axs[0,0].set_title('Count of the differente types of predictions')
-    axs[0,1].set_title('Fraction over number of predictions')
-    axs[1,0].set_title('Number of problematic samples')
-    axs[1,1].set_title('Number of empty samples')
+    axs = axs.flatten()
+    for i, data in enumerate([sums.drop('num_predictions', axis=1), fractions, num_problematic, num_empty]):
+        df = pd.DataFrame(data)
+        for col in df.columns:
+            axs[i].plot(np.array(df.index), np.array(df[col]), label=col)
+            axs[i].legend()
+    axs[0].set_title('Count of the differente types of predictions')
+    axs[1].set_title('Fraction over number of predictions')
+    axs[2].set_title('Number of problematic samples')
+    axs[3].set_title('Number of empty samples')
 
     plt.tight_layout()
     if save_figure and src_location != None:
@@ -227,11 +227,13 @@ def show_pseudo_labels_evolution(data_folder, src_location=None, show_figure=Tru
     # visualizing
     fig, axs = plt.subplots(2,2, figsize=(12,12))
     axs = axs.flatten()
-    sns.lineplot(pd.DataFrame(count_sem_agg), ax=axs[0])
-    sns.lineplot(pd.DataFrame(change_from_previous_agg), ax=axs[1])
-    sns.lineplot(pd.DataFrame(total_not_change_agg), ax=axs[2])
-    sns.lineplot(count_inf_agg, ax=axs[3])
-    # fig.delaxes(axs[3])
+    for i, data in enumerate([count_sem_agg, change_from_previous_agg, total_not_change_agg, count_inf_agg]):
+        df = pd.DataFrame(data)
+        for col in df.columns:
+            axs[i].plot(np.array(df.index), np.array(df[col]), label=col)
+    axs[0].legend()
+    axs[1].legend()
+    axs[2].legend()
 
     #   _titles and labels
     axs[0].set_title('Count per semantic category')
@@ -305,12 +307,15 @@ if __name__ == '__main__':
     # plt.tight_layout()
     # plt.show()
     # quit()
-    src_data_train = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250603_203800_training_from_initial_model\training_metrics.csv"
-    src_data_inf = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250603_203800_training_from_initial_model\inference_metrics.csv"
-    src_data_semantic = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250603_203800_training_from_initial_model"
-    # show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), save_figure=False, show_figure=True)
+    src_data_train = r"D:\PDM_repo\Github\PDM\results\trainings\20250611_095825_training_with_flattening\training_metrics.csv"
+    src_data_inf = r"D:\PDM_repo\Github\PDM\results\trainings\20250611_095825_training_with_flattening\inference_metrics.csv"
+    src_data_semantic = r"D:\PDM_repo\Github\PDM\results\trainings\20250611_095825_training_with_flattening"
+    src_data_train = r"/home/pdm/results/trainings/20250611_095825_training_with_flattening/training_metrics.csv"
+    src_data_inf = r"/home/pdm/results/trainings/20250611_095825_training_with_flattening/inference_metrics.csv"
+    src_data_semantic = r"/home/pdm/results/trainings/20250611_095825_training_with_flattening"
+    show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), save_figure=True, show_figure=False)
     # quit()
     # print(loops)
-    # show_global_metrics(src_data_train, src_location=os.path.join(src_data_semantic, "images/training_metrics.png"), save_figure=False, show_figure=True)
-    # show_inference_counts(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_count.png"), save_figure=False, show_figure=True)
-    show_inference_metrics(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_metrics.png"), save_figure=False, show_figure=True)
+    show_global_metrics(src_data_train, src_location=os.path.join(src_data_semantic, "images/training_metrics.png"), save_figure=True, show_figure=True)
+    show_inference_counts(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_count.png"), save_figure=True, show_figure=True)
+    show_inference_metrics(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_metrics.png"), save_figure=True, show_figure=True)

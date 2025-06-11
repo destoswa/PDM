@@ -12,9 +12,10 @@ pipeline:
     save_pseudo_labels_per_loop: True
     do_remove_hanging_points: True
     do_flatten: True
+    flatten_tile_size: 10
     src_floors: /home/pdm/data/dataset_pipeline/tiles_20/floors
   preload:
     do_continue_from_existing: False
     src_existing: /home/pdm/results/trainings/20250605_094139_training_with_big_batch_size
   debugging:
-    keep_previous_data: True
+    keep_previous_data: False

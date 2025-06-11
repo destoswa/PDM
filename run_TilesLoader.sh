@@ -36,17 +36,17 @@ activate_and_run(){
 
 # call the different functions depending on the mode
 if [ "$MODE" == "full" ]; then
-    activate_and_run "pdal_env" "tiling" "$VERBOSE"
+    activate_and_run "pdal_env" "tilling" "$VERBOSE"
     activate_and_run "pdm_env" "trimming" "$VERBOSE"
     activate_and_run "pdal_env" "classification" "$VERBOSE"
 elif [ "$MODE" == "trim_and_class" ]; then
     activate_and_run "pdm_env" "trimming" "$VERBOSE"
     activate_and_run "pdal_env" "classification" "$VERBOSE"
 elif [ "$MODE" == "tile_and_trim" ]; then
-    activate_and_run "pdal_env" "tiling" "$VERBOSE"
+    activate_and_run "pdal_env" "tilling" "$VERBOSE"
     activate_and_run "pdm_env" "trimming" "$VERBOSE"
-elif [ "$MODE" == "tiling" ]; then
-    activate_and_run "pdal_env" "tiling" "$VERBOSE"
+elif [ "$MODE" == "tilling" ]; then
+    activate_and_run "pdal_env" "tilling" "$VERBOSE"
 elif [ "$MODE" == "trimming" ]; then
     activate_and_run "pdm_env" "trimming" "$VERBOSE"
 elif [ "$MODE" == "classification" ]; then

@@ -82,9 +82,14 @@ RUN conda run -n pdm_env python -m pip install --no-cache-dir --upgrade \
 # RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade pip \
 #     && conda run -n pdal_env python -m pip install autopep8 doc8 ipython pandas tqdm
 RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade \
-    laspy==2.5.4 \
+    # laspy==2.5.4 \
     pandas==2.2.3 \
-    tqdm==4.67.1
+    tqdm==4.67.1 \
+    matplotlib==3.4.3 \
+    seaborn==0.11.2 \
+    omegaconf==2.0.6 \
+    laspy[laszip] \
+    numpy==1.24.4
 
 # Set up GPU-related environment variables
 ENV CU_VERSION=cu111
@@ -174,7 +179,7 @@ RUN TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST_VER} FORCE_CUDA=1 conda run -n p
     jupyterlab-pygments==0.1.2 \
     jupyterlab-widgets==1.0.2 \
     kiwisolver==1.3.2 \
-    # laspy==2.0.3 \
+    laspy[laszip] \
     llvmlite==0.33.0 \
     markdown==3.3.4 \
     markupsafe==2.0.1 \
