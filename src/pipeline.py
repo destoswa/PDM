@@ -183,21 +183,23 @@ class Pipeline():
         OmegaConf.save(yaml, src_yaml)
 
     @staticmethod
-    def remove_duplicates(laz_file):
-        # Find pairs of points
-        coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)),2).T
-        tree_B = cKDTree(coords)
-        pairs = tree_B.query_pairs(1e-2)
+    def remove_duplicates(laz_file, decimals=2):
+        coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)).T, decimals)
+        _, unique_indices = np.unique(coords, axis=0, return_index=True)
+        mask = np.zeros(len(coords), dtype=bool)
+        mask[unique_indices] = True
 
-        # Create the mask with dupplicates
-        mask = [True for i in range(len(coords))]
-        for pair in pairs:
-            mask[pair[1]] = False
+        # Create new LAS object
+        header = laspy.LasHeader(point_format=laz_file.header.point_format, version=laz_file.header.version)
+        new_las = laspy.LasData(header)
 
-        # Remove the dupplicates from the file
-        laz_file.points = laz_file.points[mask]
+        setattr(new_las, 'x', np.array(laz_file.x)[mask])
+        setattr(new_las, 'y', np.array(laz_file.y)[mask])
+        setattr(new_las, 'z', np.array(laz_file.z)[mask])
+        for dim in [x for x in laz_file.point_format.dimension_names if x not in ['X', 'Y', 'Z']]:
+            setattr(new_las, dim, np.array(laz_file[dim])[mask])
 
-        # laz_file.write(laz_file_src)
+        return new_las
 
     @staticmethod
     def match_pointclouds(laz1, laz2):
@@ -402,7 +404,8 @@ class Pipeline():
             if verbose:
                 print("size of original file: ", len(tile))
 
-            Pipeline.remove_duplicates(tile)
+            tile = Pipeline.remove_duplicates(tile)
+            tile.write(tile_path)
 
             if verbose:
                 print("size after duplicate removal: ", len(tile))
@@ -635,10 +638,11 @@ class Pipeline():
             df_results = pd.read_csv(os.path.join(results_src, 'results.csv'), sep=';')
             
             # match the original with the pred
-            # Pipeline.remove_duplicates(original_file)
-            # Pipeline.remove_duplicates(new_file)
-            # Pipeline.remove_duplicates(pred_file)
-            # Pipeline.match_pointclouds(new_file, pred_file)
+            original_file = Pipeline.remove_duplicates(original_file)
+            new_file = Pipeline.remove_duplicates(new_file)
+            pred_file = Pipeline.remove_duplicates(pred_file)
+
+            Pipeline.match_pointclouds(new_file, pred_file)
 
             coords_A = np.stack((original_file.x, original_file.y, original_file.z), axis=1)
             coords_original_file_view = coords_A.view([('', coords_A.dtype)] * 3).reshape(-1)
@@ -885,8 +889,8 @@ class Pipeline():
             tile_preds = laspy.read(os.path.join(self.data_src, 'preds', file.split('.')[0] + '_out.' + self.file_format))
 
             # match the original with the pred
-            Pipeline.remove_duplicates(tile_original)
-            Pipeline.remove_duplicates(tile_preds)
+            tile_original = Pipeline.remove_duplicates(tile_original)
+            tile_preds = Pipeline.remove_duplicates(tile_preds)
             Pipeline.match_pointclouds(tile_original, tile_preds)
 
             gt_instances = tile_original.treeID

@@ -520,6 +520,83 @@ class TilesLoader():
         )
 
     def evaluate(self, list_of_tiles_to_remove=[], verbose=True):
+
+        # # load csv of clusters
+        # df_clusters = pd.read_csv(self.tilesloader_conf.evaluate.cluster_csv_path, sep=';')
+        # number_of_clusters = sorted(df_clusters.cluster_id.unique().tolist())
+
+        # # remove tiles if necessary
+        # if len(list_of_tiles_to_remove) > 0:
+        #     df_clusters = df_clusters.loc[~df_clusters.tile_name.isin(list_of_tiles_to_remove)]
+        # lst_tiles = df_clusters.tile_name.values
+        # lst_tiles = []
+
+        # num_per_cluster = 5
+        # for cluster in number_of_clusters:
+        #     list_clusters = df_clusters.loc[df_clusters.cluster_id == cluster].sample(n=num_per_cluster, random_state=42).tile_name.values
+
+        #     if len(list_clusters) != num_per_cluster:
+        #         raise ValueError(f"Not enough samples left in cluster {cluster}!")
+        #     lst_tiles.append(list_clusters)
+        #     # print(df_clusters.loc[df_clusters.cluster_id == cluster].sample(n=num_per_cluster))
+        # lst_tiles_flatten = [x for row in lst_tiles for x in row]
+
+        # # loop on loops:
+        # loops = []
+        # x = 0
+        # while True:
+        #     if str(x) in os.listdir(self.tilesloader_conf.evaluate.run_src):
+        #         loops.append(x)
+        #         x += 1
+        #     else:
+        #         break
+        # if len(loops) == 0:
+        #     print("No loops in run folder..")
+        #     quit()
+
+        # # process evolution per cluster
+        # results_tot = {y: {x:{'garbage': [], 'multi': [], 'single': []} for x in loops} for y in range(len(lst_tiles))}
+
+        # for id_group, group in enumerate(["Crouded flat", "Crouded steep", "Empty steep", "Empty flat"]):
+        #     print("Group : ", id_group)
+        #     for loop in loops:
+        #         src_evaluation = os.path.join(self.root_src, self.tilesloader_conf.evaluate.run_src, str(loop), 'evaluation')
+        #         list_folders = [x for x in os.listdir(src_evaluation) if os.path.isdir(os.path.join(src_evaluation, x)) and x.split('_out_split_instance')[0]+'.laz' in lst_tiles[id_group]]
+        #         print(f"List folders in {src_evaluation}: {list_folders}")
+        #         # load results per 
+        #         for folder in list_folders:
+        #             results_loop = pd.read_csv(os.path.join(src_evaluation, folder, "results/results.csv"), sep=';')
+        #             print(results_loop.head())
+
+        #             for cat_num, cat_name in enumerate(['garbage', 'multi', 'single']):
+        #                 results_tot[id_group][loop][cat_name].append(len(results_loop.loc[results_loop['class'] == cat_num]))
+        
+        # results_agg = {
+        #     x: {
+        #         'garbage': [np.nanmean(results_tot[x][loop]["garbage"]) for loop in loops],
+        #         'multi': [np.nanmean(results_tot[x][loop]["multi"]) for loop in loops],
+        #         'single': [np.nanmean(results_tot[x][loop]["single"]) for loop in loops],
+        #         } for x in range(len(lst_tiles))}
+
+        # fig, axs = plt.subplots(2,2,figsize=(12,12))
+        # axs = axs.flatten()
+        # lst_titles = ['Crouded Flat', 'Crouded steep', 'Empty steep', 'Empty flat']
+        # for id_ax, ax in enumerate(axs):
+        #     df_results_agg = pd.DataFrame(results_agg[id_ax], index=range(len(loops)))
+        #     ax.plot(df_results_agg)
+        #     # ax.legend()
+        #     ax.set_title(lst_titles[id_ax])
+
+        # plt.savefig(os.path.join(self.root_src, self.tilesloader_conf.evaluate.run_src, 'test.png'))
+
+
+
+
+
+        # quit()
+
+
+
         # # prepare architecture
         # os.makedirs(os.path.join(run_src, ""), exist_ok=True)
 
@@ -671,9 +748,12 @@ class TilesLoader():
 
         fig, axs = plt.subplots(2,2,figsize=(12,12))
         axs = axs.flatten()
+        lst_titles = ['Crouded Flat', 'Crouded steep', 'Empty steep', 'Empty flat']
         for id_ax, ax in enumerate(axs):
             df_results_agg = pd.DataFrame(results_agg[id_ax], index=range(len(loops)))
             ax.plot(df_results_agg)
+            ax.legend()
+            ax.set_title(lst_titles[id_ax])
 
         plt.savefig(os.path.join(self.root_src, self.tilesloader_conf.evaluate.run_src, 'test.png'))
 
@@ -733,10 +813,10 @@ if __name__ == "__main__":
     tiles_loader = TilesLoader(cfg)
 
     # list_to_drop = ["color_grp_full_tile_568.laz", "color_grp_full_tile_504.laz"]
-    # list_to_drop = [x for x in os.listdir(os.path.join(cfg_tilesloader.tiles_loader.root_src, cfg_tilesloader.tiles_loader.evaluate.run_src, "pseudo_labels")) if x.endswith('.laz')]
+    list_to_drop = [x for x in os.listdir(os.path.join(cfg_tilesloader.tiles_loader.root_src, cfg_tilesloader.tiles_loader.evaluate.run_src, "pseudo_labels")) if x.endswith('.laz')]
 
-    # tiles_loader.evaluate(list_to_drop, verbose=True)
-    # quit()
+    tiles_loader.evaluate(list_to_drop, verbose=True)
+    quit()
 
     if len(sys.argv) > 1:
 

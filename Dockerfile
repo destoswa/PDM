@@ -49,7 +49,17 @@ ENV CONDA_AUTO_UPDATE_CONDA=false
 
 # Create and activate a conda environment for the project and one for PDAL
 RUN conda create -y -n pdm_env -c conda-forge python=3.8 pdal python-pdal && conda clean --all -y
-RUN conda create -y -n pdal_env -c conda-forge python=3.9 pdal python-pdal && conda clean --all -y
+RUN conda create -y -n pdal_env -c conda-forge python=3.9 \
+    pdal \
+    python-pdal \
+    pandas==2.2.3 \
+    tqdm==4.67.1 \
+    matplotlib==3.4.3 \
+    seaborn==0.11.2 \
+    omegaconf==2.0.6 \
+    laspy[laszip] \
+    numpy==1.24.4 \
+    && conda clean --all -y
 
 # Ensure Conda activates automatically for interactive shells
 RUN echo "source activate pdm_env" >> ~/.bashrc
@@ -81,15 +91,14 @@ RUN conda run -n pdm_env python -m pip install --no-cache-dir --upgrade \
 # Install dependencies inside the Conda environment (pdal_env)
 # RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade pip \
 #     && conda run -n pdal_env python -m pip install autopep8 doc8 ipython pandas tqdm
-RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade \
-    # laspy==2.5.4 \
-    pandas==2.2.3 \
-    tqdm==4.67.1 \
-    matplotlib==3.4.3 \
-    seaborn==0.11.2 \
-    omegaconf==2.0.6 \
-    laspy[laszip] \
-    numpy==1.24.4
+# RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade \
+#     pandas==2.2.3 \
+#     tqdm==4.67.1 \
+#     matplotlib==3.4.3 \
+#     seaborn==0.11.2 \
+#     omegaconf==2.0.6 \
+#     laspy[laszip] \
+#     numpy==1.24.4
 
 # Set up GPU-related environment variables
 ENV CU_VERSION=cu111

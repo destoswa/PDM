@@ -1,7 +1,7 @@
 pipeline:
   root_src: /home/pdm
   results_root_src: results/trainings
-  result_src_name_suffixe: training_with_flattening
+  result_src_name_suffixe: test_20m
   num_loops: 5
   train_frac: 0.7
   val_frac: 0.15
@@ -12,7 +12,7 @@ pipeline:
     save_pseudo_labels_per_loop: True
     do_remove_hanging_points: True
     do_flatten: True
-    flatten_tile_size: 10
+    flatten_tile_size: 1
     src_floors: /home/pdm/data/dataset_pipeline/tiles_20/floors
   preload:
     do_continue_from_existing: False

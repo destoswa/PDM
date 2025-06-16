@@ -1,3 +1,3 @@
 hydra:
   run:
-    dir: ../../results/trainings/20250611_095825_training_with_flattening/4
+    dir: ../../results/trainings/20250616_170238_test_20m/0

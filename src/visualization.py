@@ -307,15 +307,15 @@ if __name__ == '__main__':
     # plt.tight_layout()
     # plt.show()
     # quit()
-    src_data_train = r"D:\PDM_repo\Github\PDM\results\trainings\20250611_095825_training_with_flattening\training_metrics.csv"
-    src_data_inf = r"D:\PDM_repo\Github\PDM\results\trainings\20250611_095825_training_with_flattening\inference_metrics.csv"
-    src_data_semantic = r"D:\PDM_repo\Github\PDM\results\trainings\20250611_095825_training_with_flattening"
-    src_data_train = r"/home/pdm/results/trainings/20250611_095825_training_with_flattening/training_metrics.csv"
-    src_data_inf = r"/home/pdm/results/trainings/20250611_095825_training_with_flattening/inference_metrics.csv"
-    src_data_semantic = r"/home/pdm/results/trainings/20250611_095825_training_with_flattening"
+    src_data_train = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250610_152526_training_with_big_batch_size\training_metrics.csv"
+    src_data_inf = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250610_152526_training_with_big_batch_size\inference_metrics.csv"
+    src_data_semantic = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250610_152526_training_with_big_batch_size"
+    # src_data_train = r"/home/pdm/results/trainings/20250611_095825_training_with_flattening/training_metrics.csv"
+    # src_data_inf = r"/home/pdm/results/trainings/20250611_095825_training_with_flattening/inference_metrics.csv"
+    # src_data_semantic = r"/home/pdm/results/trainings/20250611_095825_training_with_flattening"
     show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), save_figure=True, show_figure=False)
     # quit()
     # print(loops)
-    show_global_metrics(src_data_train, src_location=os.path.join(src_data_semantic, "images/training_metrics.png"), save_figure=True, show_figure=True)
-    show_inference_counts(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_count.png"), save_figure=True, show_figure=True)
-    show_inference_metrics(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_metrics.png"), save_figure=True, show_figure=True)
+    show_global_metrics(src_data_train, src_location=os.path.join(src_data_semantic, "images/training_metrics.png"), save_figure=True, show_figure=False)
+    show_inference_counts(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_count.png"), save_figure=True, show_figure=False)
+    show_inference_metrics(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_metrics.png"), save_figure=True, show_figure=False)

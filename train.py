@@ -125,8 +125,8 @@ def main(cfg):
         pipeline.inference_metrics = pd.concat([pipeline.inference_metrics, pd.DataFrame(loop_tiles_state)], axis=0)
 
         # preprocess
-        # print("preprocessing...")
-        # pipeline.preprocess()
+        print("preprocessing...")
+        pipeline.preprocess(verbose=False)
         # print("done")
 
         # segment
