@@ -1,7 +1,7 @@
 pipeline:
   root_src: /home/pdm
   results_root_src: results/trainings
-  result_src_name_suffixe: test_20m
+  result_src_name_suffixe: test_pseudo_labels_splitting_flatten
   num_loops: 5
   train_frac: 0.7
   val_frac: 0.15
@@ -16,6 +16,6 @@ pipeline:
     src_floors: /home/pdm/data/dataset_pipeline/tiles_20/floors
   preload:
     do_continue_from_existing: False
-    src_existing: /home/pdm/results/trainings/20250605_094139_training_with_big_batch_size
+    src_existing: /home/pdm/results/trainings/20250617_133946_test_pseudo_labels_splitting
   debugging:
-    keep_previous_data: False
+    keep_previous_data: True

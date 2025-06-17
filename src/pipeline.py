@@ -4,6 +4,7 @@ import shutil
 import zipfile
 import numpy as np
 import pandas as pd
+import pickle
 # import pdal
 import json
 import laspy
@@ -51,6 +52,7 @@ class Pipeline():
 
         # config regarding preprocess
         self.do_flatten = cfg.pipeline.processes.do_flatten
+        self.flatten_tile_size = cfg.pipeline.processes.flatten_tile_size
         self.do_remove_hanging_points = cfg.pipeline.processes.do_remove_hanging_points
 
         # config regarding inference
@@ -72,8 +74,6 @@ class Pipeline():
         # config regarding results
         self.result_src_name_suffixe = cfg.pipeline.result_src_name_suffixe
         self.result_src_name = datetime.now().strftime(r"%Y%m%d_%H%M%S_") + self.result_src_name_suffixe
-        # self.training.result_src_name = "20250417_133119_test"
-        # self.result_pseudo_labels_dir = f'results/trainings/{self.result_src_name}/pseudo_labels/'
 
         if self.do_continue_from_existing:
             self.result_dir = cfg.pipeline.preload.src_existing
@@ -267,28 +267,23 @@ class Pipeline():
         pc_B = np.concatenate((pc_x[maskB], pc_y[maskB]), axis=1)
 
         intersection = np.concatenate((pc_x[intersection_mask], pc_y[intersection_mask]), axis=1)        
-        # print("pcx shape: ", pc_x.shape)
-        # print("pcy shape: ", pc_y.shape)
-        # print("pcA shape: ", pc_A.shape)
-        # print("pcB shape: ", pc_B.shape)
-        # print("intersection shape: ", intersection.shape)
         intersection_transformed = Pipeline.transform_with_pca(intersection)
-        
 
         # cut
         mask_pos = intersection_transformed[:,1] > 0
+        mask_neg = mask_pos == False
         mask_pos_full = np.zeros((len(intersection_mask)))
+        mask_neg_full = np.zeros((len(intersection_mask)))
         small_pos = 0
+        small_neg = 0
         for i in range(len(intersection_mask)):
             if intersection_mask[i]:
                 mask_pos_full[i] = mask_pos[small_pos]
                 small_pos += 1
-        mask_neg_full = mask_pos_full == False
-        # mask_neg = mask_pos == False
-        # print("mask_pos shape: ", mask_pos.shape)
-        # print("mask_neg shape: ", mask_neg.shape)
-        # print("mask_pos_full shape: ", mask_pos_full.shape)
-        # print("mask_neg_full shape: ", mask_neg_full.shape)
+        for i in range(len(intersection_mask)):
+            if intersection_mask[i]:
+                mask_neg_full[i] = mask_neg[small_neg]
+                small_neg += 1
 
         # find centroids of the two clusters:
         centroid_A = np.mean(pc_A, axis=0)
@@ -299,6 +294,12 @@ class Pipeline():
         dist_pos_A = ((centroid_A[0] - centroid_pos[0])**2 + (centroid_A[1] - centroid_pos[1])**2)**0.5
         dist_pos_B = ((centroid_B[0] - centroid_pos[0])**2 + (centroid_B[1] - centroid_pos[1])**2)**0.5
 
+        # remove intersection from masks
+        anti_intersection_mask = intersection_mask == False
+        maskA = maskA.astype(bool) & anti_intersection_mask.astype(bool)
+        maskB = maskB.astype(bool) & anti_intersection_mask.astype(bool)
+
+        # add part of intersection to each mask
         if dist_pos_A < dist_pos_B:
             maskA = (maskA.astype(bool) | mask_pos_full.astype(bool))
             maskB = (maskB.astype(bool) | mask_neg_full.astype(bool))
@@ -307,47 +308,6 @@ class Pipeline():
             maskB = (maskB.astype(bool) | mask_pos_full.astype(bool))
         
         return maskA, maskB
-
-    # @staticmethod
-    # def match_pointclouds(laz1, laz2):
-    #     """Sort laz2 to match the order of laz1 without changing laz1's order.
-
-    #     Args:
-    #         laz1: laspy.LasData object (reference order)
-    #         laz2: laspy.LasData object (to be sorted)
-        
-    #     Returns:
-    #         laz2 sorted to match laz1
-    #     """
-    #     # Retrieve and round coordinates for robust matching
-    #     coords_1 = np.round(np.vstack((laz1.x, laz1.y, laz1.z)), 2).T
-    #     coords_2 = np.round(np.vstack((laz2.x, laz2.y, laz2.z)), 2).T
-
-    #     # Verify laz2 is of the same size as laz1
-    #     assert len(coords_2) == len(coords_1), "laz2 should be a subset of laz1"
-
-    #     # Create a dictionary mapping from coordinates to indices
-    #     coord_to_idx = {tuple(coord): idx for idx, coord in enumerate(coords_1)}
-
-    #     # Find indices in laz1 that correspond to laz2
-    #     matching_indices = []
-    #     failed = 0
-    #     for coord in coords_2:
-    #         try:
-    #             matching_indices.append(coord_to_idx[tuple(coord)])
-    #         except Exception as e:
-    #             failed += 1
-    #     # print(f"Number of non-matching points: {failed}")
-
-    #     matching_indices = np.array([coord_to_idx[tuple(coord)] for coord in coords_2])
-
-    #     # Sort laz2 to match laz1
-    #     sorted_indices = np.argsort(matching_indices)
-
-    #     # Apply sorting to all attributes of laz2
-    #     laz2.points = laz2.points[sorted_indices]
-
-    #     return laz2  # Now sorted to match laz1
 
     def run_subprocess(self, src_script, script_name, add_to_log=True, params=None, verbose=True):
         # go at the root of the segmenter
@@ -359,12 +319,10 @@ class Pipeline():
             self.log += f"\n========\nSCRIPT: {script_name}\n========\n"
 
         # construct command and run subprocess
-        # script_str = script_name
         script_str = ['bash', script_name]
         if params:
             for x in params:
                 script_str.append(str(x))
-            # script_str += ' ' + ' '.join([str(x) for x in params])
         process = subprocess.Popen(
             script_str,
             stdout=subprocess.PIPE,
@@ -409,7 +367,6 @@ class Pipeline():
 
             if verbose:
                 print("size after duplicate removal: ", len(tile))
-
 
     def segment(self, verbose=False):
         print("Starting inference:")
@@ -569,8 +526,6 @@ class Pipeline():
         # loop on files:
         list_files = [f for f in os.listdir(self.preds_src) if f.endswith(self.file_format)]
         for _, file in tqdm(enumerate(list_files), total=len(list_files), desc="Processing"):
-            # if "321" not in file:
-            #     continue
             split_instance(os.path.join(self.preds_src, file), verbose=verbose)
 
             # convert instances to pcd
@@ -608,8 +563,16 @@ class Pipeline():
             for file in os.listdir(output_folder):
                 if file.endswith('.pcd'):
                     os.remove(os.path.join(output_folder, file))
-            
+
+    # def save_sample(self, laz_file, mask, other_mask, num, destination):
+    #     with open(os.path.join(destination, f'mask{num}.pickle'), 'wb') as file:
+    #         pickle.dump(mask, file)
+    #     with open(os.path.join(destination, f'other_mask{num}.pickle'), 'wb') as file:
+    #         pickle.dump(other_mask, file)
+    #     laz_file.write(os.path.join(destination, f'tile_{num}.laz'))
+
     def create_pseudo_labels(self, verbose=False):
+        sample_to_save_temp = 0
         print("Creating pseudo labels:")
         self.log += "Creating pseudo labels:\n"
         list_folders = [x for x in os.listdir(self.preds_src) if os.path.abspath(os.path.join(self.preds_src, x)) and x.endswith('instance')]
@@ -689,6 +652,9 @@ class Pipeline():
             # quit()
             id_new_tree = len(set(new_file.treeID))
             for id_tree, (mask, value) in tqdm(enumerate(results), total=len(results), desc='temp', disable=~verbose):
+                if verbose:
+                    print(f"Processing prediction {id_tree} of size {np.sum(mask)}")
+                self.log += f"Processing prediction {id_tree} of size {np.sum(mask)} \n"
                 """
                 value to label:
                     0: garbage
@@ -699,20 +665,16 @@ class Pipeline():
                     1: ground
                     4: tree
                 """
-                # set instance p-label
-                # new_file.treeID[mask] = id_tree
-                
+
                 # check if new tree
                 corresponding_instances = new_file.treeID[mask]
                 # corresponding_semantic = new_file.classification[mask]
-                is_new_tree = False
+                is_new_tree = True
                 if verbose:
                     print("Set of overlapping instances: ", set(corresponding_instances))
                 self.log += f"Set of overlapping instances: {set(corresponding_instances)}\n"
                 
-                if len(set(corresponding_instances)) == 1 and corresponding_instances[0] == 0:
-                    is_new_tree = True
-                    
+                if len(set(corresponding_instances)) == 1 and corresponding_instances[0] == 0:                    
                     if verbose:
                         print(f"Adding treeID {id_new_tree} because only grey and ground: ")
                     self.log += f"Adding treeID {id_new_tree} because only grey and ground: \n"
@@ -721,12 +683,12 @@ class Pipeline():
                         print(f"Comparing to existing values")
                     self.log += f"Comparing to existing values \n"
 
-                    is_new_tree = True
                     for instance in set(corresponding_instances):
                         # if ground
                         if instance == 0:
                             dict_reasons_of_rejection["is_ground"] += 1
-                            is_new_tree = False
+                            continue
+                            # is_new_tree = False
                             # break
 
                         other_tree_mask = new_file.treeID == instance
@@ -753,66 +715,58 @@ class Pipeline():
                             intersection_pca = Pipeline.transform_with_pca(intersection)
                             small_range = np.max(intersection_pca[:,1]) - np.min(intersection_pca[:,1])
                             if small_range > 2:
-                            # range_x = np.min(intersection[0,:]) - np.max(intersection[0,:])
-                            # range_y = np.min(intersection[1,:]) - np.max(intersection[1,:])
-                            # range_z = np.min(intersection[2,:]) - np.max(intersection[2,:])
-                            # if range_x > 4 or range_y > 4 or range_z > 4:
                                 is_new_tree = False
                                 dict_reasons_of_rejection["overlapping_greater_than_2"] += 1
-                                # break
 
                         # intersection over new tree
                         if np.sum(intersection_mask) / np.sum(mask) > 0.7:
                             is_new_tree = False
                             dict_reasons_of_rejection["i_o_new_tree_greater_than_70_per"] += 1
-                            # break 
                             
                         if is_new_tree == False:
                             dict_reasons_of_rejection["total"] += 1
 
                 if is_new_tree == True:
+                    # print("New Tree")
                     # update classification
                     new_file.classification[mask] = 4
 
                     # update instances
                     if verbose:
                         print("Length of corresponding instances: ", len(set(corresponding_instances)))
+                    self.log += f"Length of corresponding instances: {len(set(corresponding_instances))} \n"
                     if len(set(corresponding_instances)) > 1:
+                        # print("More than one overlapp")
                         for instance in set(corresponding_instances):
                             if instance == 0:
                                 continue
+
+
+                            src_dest_temp = '/home/pdm/results/samples_split_fail'
+                            os.makedirs(src_dest_temp, exist_ok=True)
+                            self.save_sample(new_file, mask, other_tree_mask, sample_to_save_temp, src_dest_temp)
+                            sample_to_save_temp += 1
+
+
+                            # print("Splitting with instance ", instance)
                             dict_reasons_of_rejection["splitting_using_pca"] += 1
                             other_tree_mask = new_file.treeID == instance
                             intersection_mask = mask & other_tree_mask
-
+                            # print("\t Length mask before split: ", np.sum(mask))
                             if np.sum(intersection_mask) > 1:
                                 mask, new_other_tree_mask = Pipeline.split_instances(new_file, mask, other_tree_mask)
+                            # print("\t Length mask after split: ", np.sum(mask))
                         
                             # test if trees are still recognisable
                             # later...
 
                     new_file.treeID[mask] = id_new_tree
-                    id_new_tree += 1
 
                     if verbose:
-                        print("New tree with instance: ", id_new_tree)
-                    self.log += f"New tree with instance: {id_new_tree} \n"
-
-                
-                # set semantic p-label
-                
-                # test if 
-
-
-                # if value == 1 or (self.garbage_as_grey and value == 0):
-                #     new_file.classification[mask] = 0
-                # elif value == 0 and not self.garbage_as_grey:
-                #     new_file.classification[mask] = 1
-                # elif value == 2:
-                #     new_file.classification[mask] = 4
-                # else:
-                #     raise ValueError("Problem in the setting of the semantic pseudo-labels!")
-                
+                        print("New tree with instance: ", id_new_tree, " and length: ", np.sum(mask))
+                    self.log += f"New tree with instance: {id_new_tree}  and length: {np.sum(mask)} \n"
+                    id_new_tree += 1
+             
             # saving back original file and also to corresponding loop if flag set to
             new_file.write(original_file_src)
             pd.DataFrame(index=dict_reasons_of_rejection.keys(), data=dict_reasons_of_rejection.values(), columns=['count']).to_csv(os.path.join(self.result_current_loop_dir, 'pseudo_labels_reasons_of_reject.csv'), sep=';')
@@ -832,11 +786,19 @@ class Pipeline():
         if self.do_flatten:
             self.original_result_pseudo_labels_dir = self.result_pseudo_labels_dir
             self.result_pseudo_labels_dir = os.path.normpath(self.result_pseudo_labels_dir) + "_flatten"
-            # os.makedirs(self.result_pseudo_labels_dir, exist_ok=True)
+
+            # if initialization, copy pseudo-labels to flatten
             if self.current_loop == 0:
-                shutil.copytree(
-                    self.original_result_pseudo_labels_dir,
-                    self.result_pseudo_labels_dir,
+                os.makedirs(self.result_pseudo_labels_dir, exist_ok=True)
+                for tile in os.listdir(os.path.join(self.data_src, "flatten")):
+                    destination_file = os.path.join(self.result_pseudo_labels_dir, tile.split('_flatten')[0] + '.laz')
+                    shutil.copyfile(
+                        os.path.join(self.data_src, 'flatten', tile),
+                        destination_file
+                    )
+                shutil.copyfile(
+                    os.path.join(self.original_result_pseudo_labels_dir, 'data_split_metadata.csv'),
+                    os.path.join(self.result_pseudo_labels_dir, 'data_split_metadata.csv'),
                 )
 
             for tile in [x for x in os.listdir(self.original_result_pseudo_labels_dir) if x.endswith('.laz')]:
@@ -844,7 +806,7 @@ class Pipeline():
                 flatten_file = laspy.read(flatten_pseudo_labels_src)
                 original_file = laspy.read(os.path.join(self.original_result_pseudo_labels_dir, tile))
 
-                if self.num_loops == 0:
+                if self.current_loop == 0:
                     flatten_file.add_extra_dim(
                         laspy.ExtraBytesParams(
                             name='treeID',
@@ -870,11 +832,6 @@ class Pipeline():
 
     def stats_on_tiles(self):
         print("Computing stats on tiles")
-        # lst_files = [x for x in os.listdir(self.data_src) if x.endswith(self.file_format) and x not in self.problematic_tiles]
-        # if self.classification.processes.do_remove_empty_tiles and len(self.empty_tiles) > 0:
-        #     lst_files = [f for f in lst_files if f not in self.empty_tiles]
-
-        # for _, file in tqdm(enumerate(lst_files), total=len(lst_files), desc="processing"):
         for _, file in tqdm(enumerate(self.tiles_to_process), total=len(self.tiles_to_process), desc="processing"):
             # Add stats to state variable
             dir_target = self.preds_src + '/' + file.split('/')[-1].split('.')[0] + "_out_split_instance"
@@ -886,7 +843,12 @@ class Pipeline():
 
             # metrics on pseudo labels
             tile_original = laspy.read(os.path.join(self.result_pseudo_labels_dir, file))
-            tile_preds = laspy.read(os.path.join(self.data_src, 'preds', file.split('.')[0] + '_out.' + self.file_format))
+            pred_src = ""
+            if self.do_flatten:
+                pred_src = os.path.join(self.data_src, 'preds_flatten', file.split('.')[0] + "_flatten_" + str(self.flatten_tile_size) +'m_out.' + self.file_format)
+            else:
+                pred_src = os.path.join(self.data_src, 'preds', file.split('.')[0] + '_out.' + self.file_format)
+            tile_preds = laspy.read(pred_src)
 
             # match the original with the pred
             tile_original = Pipeline.remove_duplicates(tile_original)

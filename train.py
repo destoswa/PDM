@@ -127,17 +127,10 @@ def main(cfg):
         # preprocess
         print("preprocessing...")
         pipeline.preprocess(verbose=False)
-        # print("done")
 
         # segment
         pipeline.segment(verbose=False)
         pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
-
-        # pipeline.problematic_tiles = ["color_grp_full_tile_4.laz", "color_grp_full_tile_7.laz", "color_grp_full_tile_12.laz", "color_grp_full_tile_10.laz"]
-        # for tile in pipeline.problematic_tiles:
-        #     if tile in pipeline.tiles_to_process:
-        #         pipeline.tiles_to_process.remove(tile)
-
 
         # create csv for files referencing
         num_train = int(len(pipeline.tiles_to_process) * (TRAIN_FRAC + VAL_FRAC))
@@ -154,16 +147,13 @@ def main(cfg):
 
         df_split_data = pd.DataFrame(columns=['path', 'folder', 'split'], data=lst_split_data)
         df_split_data.to_csv(os.path.join(pipeline.result_pseudo_labels_dir, 'data_split_metadata.csv'), sep=',', index=False)
-
-        # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
         
         # classify
         pipeline.classify(verbose=False)
         pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
-        # print(f"TILES TO PROCESS ({len(pipeline.tiles_to_process)}): ", pipeline.tiles_to_process)
 
         # create pseudo-labels
-        pipeline.create_pseudo_labels(verbose=False)
+        pipeline.create_pseudo_labels(verbose=True)
         
         # compute stats on tiles
         pipeline.stats_on_tiles()
@@ -179,7 +169,7 @@ def main(cfg):
         hours = int(delta_time_loop // 3600)
         min = int((delta_time_loop - 3600 * hours) // 60)
         sec = int(delta_time_loop - 3600 * hours - 60 * min)
-        print(f"==== Loop done in {hours}:{min}:{sec}====")
+        print(f"==== Loop done in {hours}:{min}:{sec} ====")
 
         # save states info
         pipeline.inference_metrics.to_csv(
