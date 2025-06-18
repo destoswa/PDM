@@ -15,29 +15,6 @@ from time import time
 from src.pipeline import Pipeline
 from src.preprocessing import flattening
 
-        
-
-# def remove_duplicates(laz_file_src):
-#     laz_file = laspy.read(laz_file_src)
-#     # Find pairs of points
-#     coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)),2).T
-#     tree_B = cKDTree(coords)
-#     pairs = tree_B.query_pairs(1e-2)
-
-#     # Create the mask with dupplicates
-#     mask = [True for i in range(len(coords))]
-#     for pair in pairs:
-#         mask[pair[1]] = False
-
-#     # Remove the dupplicates from the file
-#     # print(len(laz_file))
-#     # laz_file.points = laz_file.points[mask]
-#     # print(len(laz_file))
-#     # print(np.sum(mask))
-#     # print("-------")
-
-#     laz_file.write(laz_file_src)
-
 
 def main(cfg):
     # fixing seed

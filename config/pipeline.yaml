@@ -1,7 +1,7 @@
 pipeline:
   root_src: /home/pdm
   results_root_src: results/trainings
-  result_src_name_suffixe: test_pseudo_labels_splitting_flatten
+  result_src_name_suffixe: test_classifier_corr_in_pseudo_labels
   num_loops: 5
   train_frac: 0.7
   val_frac: 0.15
@@ -18,4 +18,4 @@ pipeline:
     do_continue_from_existing: False
     src_existing: /home/pdm/results/trainings/20250617_133946_test_pseudo_labels_splitting
   debugging:
-    keep_previous_data: True
+    keep_previous_data: False

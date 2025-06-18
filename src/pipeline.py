@@ -24,6 +24,7 @@ from src.pseudo_labels_creation import update_attribute_where_cluster_match
 from src.metrics import compute_classification_results, compute_panoptic_quality, compute_mean_iou
 from src.visualization import show_global_metrics, show_inference_counts, show_inference_metrics, show_pseudo_labels_evolution
 from src.splitting import split_instance
+from src.fast_inference import fast_inference
 # from models.KDE_classifier.inference import inference
 
 
@@ -572,9 +573,14 @@ class Pipeline():
     #     laz_file.write(os.path.join(destination, f'tile_{num}.laz'))
 
     def create_pseudo_labels(self, verbose=False):
-        sample_to_save_temp = 0
         print("Creating pseudo labels:")
         self.log += "Creating pseudo labels:\n"
+
+        # load arguments of classifier
+        args_classifier = OmegaConf.load("./models/KDE_classifier/config/inference.yaml")
+
+        # loop on samples
+        dict_monitoring = {x:0 for x in ['total', 'new_instance', 'is_ground', 'same_heighest_point', 'overlapping_greater_than_2', 'i_o_new_tree_greater_than_70_per', 'splitting_using_pca', 'not_a_tree_after_splitting']}
         list_folders = [x for x in os.listdir(self.preds_src) if os.path.abspath(os.path.join(self.preds_src, x)) and x.endswith('instance')]
         for _, child in tqdm(enumerate(list_folders), total=len(list_folders), desc='Processing'):
             if verbose:
@@ -646,7 +652,6 @@ class Pipeline():
                 results = list(tqdm(executor.map(partialFunc, range(len(self.classified_clusters))), total=len(self.classified_clusters), smoothing=0.9, desc="Updating pseudo-label", disable=~verbose))
             
             # Update the original file based on results and update the csv file with ref to trees
-            dict_reasons_of_rejection = {x:0 for x in ['total', 'is_ground', 'same_heighest_point', 'overlapping_greater_than_2', 'i_o_new_tree_greater_than_70_per', 'splitting_using_pca']}
             # print(dict_reasons_of_rejection)
             # print(pd.DataFrame(index=dict_reasons_of_rejection.keys(), data=dict_reasons_of_rejection.values()))
             # quit()
@@ -666,9 +671,8 @@ class Pipeline():
                     4: tree
                 """
 
-                # check if new tree
+                # Check if new tree
                 corresponding_instances = new_file.treeID[mask]
-                # corresponding_semantic = new_file.classification[mask]
                 is_new_tree = True
                 if verbose:
                     print("Set of overlapping instances: ", set(corresponding_instances))
@@ -684,92 +688,99 @@ class Pipeline():
                     self.log += f"Comparing to existing values \n"
 
                     for instance in set(corresponding_instances):
-                        # if ground
+                        # Don't compare if other instance is the ground
                         if instance == 0:
-                            dict_reasons_of_rejection["is_ground"] += 1
+                            dict_monitoring["is_ground"] += 1
                             continue
-                            # is_new_tree = False
-                            # break
 
                         other_tree_mask = new_file.treeID == instance
                         new_file_x = np.array(getattr(new_file, 'x')).reshape((-1,1))
                         new_file_y = np.array(getattr(new_file, 'y')).reshape((-1,1))
                         new_file_z = np.array(getattr(new_file, 'z')).reshape((-1,1))
+                        pointCloud = np.stack([new_file_x, new_file_y, new_file_z], axis=1)
+
  
-                        # compare heighest points
+                        # Compare heighest points
                         if np.max(new_file_z[mask]) == np.max(new_file_z[other_tree_mask]):
-                            dict_reasons_of_rejection["same_heighest_point"] += 1
+                            dict_monitoring["same_heighest_point"] += 1
                             is_new_tree = False
-                            # break
                         
-                        # get intersection
+                        # Get intersection
                         intersection_mask = mask & other_tree_mask
                         if np.sum(intersection_mask) > 1:
-                            # intersection = np.vstack((new_file_x[intersection_mask], new_file_y[intersection_mask], new_file_z[intersection_mask]))
+                            # Intersection = np.vstack((new_file_x[intersection_mask], new_file_y[intersection_mask], new_file_z[intersection_mask]))
                             intersection = np.concatenate((new_file_x, new_file_y), axis=1)[intersection_mask]
                             if verbose:
                                 print(f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)}")
                             self.log += f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)} \n"
 
-                            # check radius of intersection
+                            # Check radius of intersection
                             intersection_pca = Pipeline.transform_with_pca(intersection)
                             small_range = np.max(intersection_pca[:,1]) - np.min(intersection_pca[:,1])
                             if small_range > 2:
                                 is_new_tree = False
-                                dict_reasons_of_rejection["overlapping_greater_than_2"] += 1
+                                dict_monitoring["overlapping_greater_than_2"] += 1
 
-                        # intersection over new tree
+                        # Intersection over new tree
                         if np.sum(intersection_mask) / np.sum(mask) > 0.7:
                             is_new_tree = False
-                            dict_reasons_of_rejection["i_o_new_tree_greater_than_70_per"] += 1
+                            dict_monitoring["i_o_new_tree_greater_than_70_per"] += 1
                             
                         if is_new_tree == False:
-                            dict_reasons_of_rejection["total"] += 1
+                            dict_monitoring["total"] += 1
 
                 if is_new_tree == True:
-                    # print("New Tree")
-                    # update classification
-                    new_file.classification[mask] = 4
-
-                    # update instances
+                    # Update instances
                     if verbose:
                         print("Length of corresponding instances: ", len(set(corresponding_instances)))
                     self.log += f"Length of corresponding instances: {len(set(corresponding_instances))} \n"
+
                     if len(set(corresponding_instances)) > 1:
                         # print("More than one overlapp")
                         for instance in set(corresponding_instances):
+                            # Don't split if ground
                             if instance == 0:
                                 continue
 
-
-                            src_dest_temp = '/home/pdm/results/samples_split_fail'
-                            os.makedirs(src_dest_temp, exist_ok=True)
-                            self.save_sample(new_file, mask, other_tree_mask, sample_to_save_temp, src_dest_temp)
-                            sample_to_save_temp += 1
-
-
-                            # print("Splitting with instance ", instance)
-                            dict_reasons_of_rejection["splitting_using_pca"] += 1
-                            other_tree_mask = new_file.treeID == instance
+                            # Don't split if intersection too small
                             intersection_mask = mask & other_tree_mask
-                            # print("\t Length mask before split: ", np.sum(mask))
-                            if np.sum(intersection_mask) > 1:
-                                mask, new_other_tree_mask = Pipeline.split_instances(new_file, mask, other_tree_mask)
-                            # print("\t Length mask after split: ", np.sum(mask))
-                        
-                            # test if trees are still recognisable
-                            # later...
+                            if np.sum(intersection_mask) < 2:
+                                continue
 
-                    new_file.treeID[mask] = id_new_tree
+                            # Splitting
+                            dict_monitoring["splitting_using_pca"] += 1
+                            other_tree_mask = new_file.treeID == instance
+                            mask, new_other_tree_mask = Pipeline.split_instances(new_file, mask, other_tree_mask)
 
-                    if verbose:
-                        print("New tree with instance: ", id_new_tree, " and length: ", np.sum(mask))
-                    self.log += f"New tree with instance: {id_new_tree}  and length: {np.sum(mask)} \n"
-                    id_new_tree += 1
+                            # Check if splitted instances are still predicted as trees
+                            tree_1 = pointCloud[mask]
+                            tree_2 = pointCloud[new_other_tree_mask]
+                            print("New tree shape: ", tree_1.shape)
+                            print("Other tree shape: ", tree_2.shape)
+                            preds_classifier = fast_inference([tree_1, tree_2], args_classifier)
+
+                            # Stop adding the new instance if any of the two are not predicted as tree anymore
+                            if np.any(np.argmax(preds_classifier, axis=1) != 2):
+                                dict_monitoring["not_a_tree_after_splitting"] += 1
+                                print("NOT A NEW TREE AFTER SPLITTING")
+                                is_new_tree = False
+                                break
+
+                    if is_new_tree:
+                        dict_monitoring["new_instance"] += 1
+                        # update classification
+                        new_file.classification[mask] = 4
+
+                        # update instance
+                        new_file.treeID[mask] = id_new_tree
+
+                        if verbose:
+                            print("New tree with instance: ", id_new_tree, " and length: ", np.sum(mask))
+                        self.log += f"New tree with instance: {id_new_tree}  and length: {np.sum(mask)} \n"
+                        id_new_tree += 1
              
             # saving back original file and also to corresponding loop if flag set to
             new_file.write(original_file_src)
-            pd.DataFrame(index=dict_reasons_of_rejection.keys(), data=dict_reasons_of_rejection.values(), columns=['count']).to_csv(os.path.join(self.result_current_loop_dir, 'pseudo_labels_reasons_of_reject.csv'), sep=';')
             if self.save_pseudo_labels_per_loop:
                 os.makedirs(os.path.join(self.result_current_loop_dir, "pseudo_labels"), exist_ok=True)
                 loop_file_src = os.path.join(self.result_current_loop_dir, "pseudo_labels", os.path.basename(original_file_src))
@@ -780,6 +791,10 @@ class Pipeline():
         for tile_name in list_tiles_pseudo_labels:
             if tile_name not in self.tiles_to_process:
                 os.remove(os.path.join(self.result_pseudo_labels_dir, tile_name))
+
+        # Save monitoring
+        print(dict_monitoring)
+        pd.DataFrame(index=dict_monitoring.keys(), data=dict_monitoring.values(), columns=['count']).to_csv(os.path.join(self.result_current_loop_dir, 'pseudo_labels_monitoring.csv'), sep=';')
         
         # If flatten, create a flatten version of the pseudo_labels
         self.original_result_pseudo_labels_dir = ""
