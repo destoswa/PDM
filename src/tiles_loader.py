@@ -15,6 +15,13 @@ import json
 import warnings
 import zipfile
 
+
+# from multiprocess import Pool  # instead of concurrent.futures
+# import concurrent.futures
+
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from functools import partial
+
 from splitting import split_instance
 from format_conversions import convert_all_in_folder 
 
@@ -25,6 +32,31 @@ ENV = os.environ['CONDA_DEFAULT_ENV']
 if ENV == "pdal_env":
     import pdal
 
+# @staticmethod
+# def remove_hanging_points_compare(points_pos_in_container, container, threshold, point_id):
+#     num_neighboors = 0
+#     pos = points_pos_in_container[point_id]
+#     for dx in range(-1, 2):
+#         for dy in range(-1, 2):
+#             for dz in range(-1, 2):
+#                 x = np.max([pos[0] + dx, 0])
+#                 y = np.max([pos[1] + dy, 0])
+#                 z = np.max([pos[2] + dz, 0])
+#                 num_neighboors += len(container[x][y][z])
+#     if num_neighboors < threshold:
+#         return point_id
+#         # isolated_points.append(point_id)
+#     return -1
+
+# def get_isolated_points(points, points_pos_in_container, container, threshold):
+#     args = range(points.shape[0])
+#     with concurrent.futures.ProcessPoolExecutor() as executor:
+#         fn = partial(remove_hanging_points_compare,
+#                      points_pos_in_container=points_pos_in_container,
+#                      container=container,
+#                      threshold=threshold)
+#         results = list(tqdm(executor.map(fn, args), total=len(args), desc="Finding isolated points"))
+#     return results
 
 class TilesLoader():
     def __init__(self, cfg):
@@ -42,6 +74,7 @@ class TilesLoader():
         self.segmentation_results_dir = os.path.join(self.root_src, self.results_dest, "segmented")
         self.classification_results_dir = os.path.join(self.root_src, self.results_dest, "classified")
         self.data_dest = self.tilesloader_conf.tiles_destination
+        self.tiles_to_remove = self.tilesloader_conf.evaluate.tiles_to_remove
         self.list_tiles = []
         self.list_pack_of_tiles = []
         self.problematic_tiles = []
@@ -159,8 +192,10 @@ class TilesLoader():
         if delete_zip:
             os.remove(zip_path)
     
+
+    
     @staticmethod
-    def remove_hanging_points(src_laz_in, src_laz_out, voxel_size=2, threshold=5):
+    def remove_hanging_points(src_laz_in, src_laz_out, voxel_size=2, threshold=5, verbose=True):
         # voxelize the tile
         laz_in = laspy.read(src_laz_in)
         points = np.array(laz_in.xyz)
@@ -176,8 +211,7 @@ class TilesLoader():
 
         container = {x:{y:{z:[] for z in range(len(voxel_indices[2]))} for y in range(len(voxel_indices[1]))} for x in range(len(voxel_indices[0]))}
         points_pos_in_container = []
-        print(container)
-        for _, point_id in tqdm(enumerate(range(points.shape[0])), total = points.shape[0]):
+        for _, point_id in tqdm(enumerate(range(points.shape[0])), total = points.shape[0], desc="Distribute points in voxels", disable=verbose==False):
             full_pos = [0,0,0]
             for ax in range(3):
                 for pos in range(len(voxel_indices[ax])):
@@ -189,8 +223,29 @@ class TilesLoader():
             points_pos_in_container.append(full_pos)
 
         # find the isolated points
+        # results = get_isolated_points(points, points_pos_in_container, container, threshold)
+
+        # with Pool() as pool:
+        #     partialFunc = partial(self.remove_hanging_points_compare, points_pos_in_container, container, threshold)
+        #     results = list(tqdm(pool.imap(partialFunc, range(points.shape[0])),
+        #                         total=points.shape[0], desc="test"))
+
+        # with ThreadPoolExecutor() as executor:
+        #     partialFunc = partial(self.remove_hanging_points_compare, points_pos_in_container, container, threshold)
+        #     # partialFunc = partial(self.test)
+        #     results = list(tqdm(executor.map(partialFunc, range(points.shape[0])), total=points.shape[0], smoothing=0.9, desc="Updating pseudo-label"))
+
+
+
+
         isolated_points = []
-        for _, point_id in tqdm(enumerate(range(points.shape[0])), total = points.shape[0]):
+        # with concurrent.futures.ProcessPoolExecutor() as executor:
+        #     partial_points_pos_in_container = partial(remove_hanging_points_compare, points_pos_in_container, container, threshold)
+        #     args = range(points.shape[0])
+        #     results = list(tqdm(executor.map(partial_points_pos_in_container, args), total=points.shape[0], smoothing=.9, desc="creating caching files"))
+        # isolated_points = [x for x in results if x != -1]
+        # print(f"Number of failing files: {len(num_fails)}")
+        for _, point_id in tqdm(enumerate(range(points.shape[0])), total = points.shape[0], desc="Find isolated points", disable=verbose==False):
             num_neighboors = 0
             pos = points_pos_in_container[point_id]
             for dx in range(-1, 2):
@@ -204,16 +259,47 @@ class TilesLoader():
                 isolated_points.append(point_id)
 
         # create mask
-        src_sample = r"D:\PDM_repo\Github\PDM\data\full_dataset\selection\clusters_4\cluster_2\color_grp_full_tile_586.laz"
-        new_file_src = os.path.basename(src_sample).split('.laz')[0] + 'voxel_size_2_isolated_th_5.laz'
-        new_laz_src = os.path.join(os.path.dirname(src_sample), new_file_src)
-        laz_in = laspy.read(new_laz_src)
+        if 'isolated' not in list(laz_in.point_format.dimension_names):
+            laz_in.add_extra_dim(
+                laspy.ExtraBytesParams(
+                    name='isolated',
+                    type="f4",
+                    description='Isolated points',
+                    ),
+                )
+        laz_in.isolated = np.zeros(len(laz_in), dtype="f4")
+        for iso_id in isolated_points:
+            laz_in.isolated[iso_id] = 1
+        # src_sample = r"D:\PDM_repo\Github\PDM\data\full_dataset\selection\clusters_4\cluster_2\color_grp_full_tile_586.laz"
+        # new_file_src = os.path.basename(src_sample).split('.laz')[0] + 'voxel_size_2_isolated_th_5.laz'
+        # new_laz_src = os.path.join(os.path.dirname(src_sample), new_file_src)
+        # laz_in = laspy.read(new_laz_src)
         mask_isolated = laz_in.isolated == 0
 
         # remove points based on mask
         laz_in.points = laz_in.points[mask_isolated]
         laz_in.write(src_laz_out)
 
+    # @staticmethod
+    # def test(point_id):
+    #     return point_id
+    
+    # # @staticmethod
+    # def remove_hanging_points_compare(self, points_pos_in_container, container, threshold, point_id):
+        num_neighboors = 0
+        pos = points_pos_in_container[point_id]
+        for dx in range(-1, 2):
+            for dy in range(-1, 2):
+                for dz in range(-1, 2):
+                    x = np.max([pos[0] + dx, 0])
+                    y = np.max([pos[1] + dy, 0])
+                    z = np.max([pos[2] + dz, 0])
+                    num_neighboors += len(container[x][y][z])
+        if num_neighboors < threshold:
+            return point_id
+            # isolated_points.append(point_id)
+        return -1
+    
     @staticmethod
     def change_var_val_yaml(src_yaml, var, val):
         # load yaml file
@@ -254,6 +340,7 @@ class TilesLoader():
     # ===================================
 
     def tilling(self, verbose):
+        print("Start tilling...")
         if os.path.exists(self.data_dest):
             answer = None
             while answer not in ['y', 'yes', 'n', 'no', ""]:
@@ -321,6 +408,7 @@ class TilesLoader():
         print("Tiling complete.")
 
     def trimming(self, verbose=True):
+        print("Start trimming...")
         if self.trimming_method == "tree":
             if self.not_yet_trim == True:
                 self.pack_size = self.trimming_tree_list[0]
@@ -441,19 +529,22 @@ class TilesLoader():
         if self.trimming_method == "tree":
             self.trimming(verbose=verbose)
 
-    def preprocess(self):
+    def preprocess(self, verbose=True):
+        print("Start preprocessing...")
         # security
         self.list_tiles = [x for x in os.listdir(self.data_dest)]
         assert len(self.list_tiles) != 0
 
         # remove hanging points
         if self.tilesloader_conf.preprocess.do_remove_hanging_points:
-            for tile in self.list_tiles:
+            print("Removing hanging points...")
+            for _, tile in tqdm(enumerate(self.list_tiles), total=len(self.list_tiles), desc="Processing"):
                 TilesLoader.remove_hanging_points(
                     src_laz_in=os.path.join(self.data_dest, tile),
                     src_laz_out=os.path.join(self.data_dest, tile),
                     voxel_size=2,
                     threshold=5,
+                    verbose=verbose
                 )
 
     def classify(self, verbose=True):
@@ -519,7 +610,7 @@ class TilesLoader():
             index=False,
         )
 
-    def evaluate(self, list_of_tiles_to_remove=[], verbose=True):
+    def evaluate(self, verbose=True):
 
         # # load csv of clusters
         # df_clusters = pd.read_csv(self.tilesloader_conf.evaluate.cluster_csv_path, sep=';')
@@ -605,7 +696,7 @@ class TilesLoader():
         number_of_clusters = sorted(df_clusters.cluster_id.unique().tolist())
 
         # remove tiles if necessary
-        if len(list_of_tiles_to_remove) > 0:
+        if len(self.tiles_to_remove) > 0:
             df_clusters = df_clusters.loc[~df_clusters.tile_name.isin(list_of_tiles_to_remove)]
         lst_tiles = df_clusters.tile_name.values
         lst_tiles = []
@@ -784,7 +875,6 @@ class TilesLoader():
         # sns.lineplot(df_results_agg)
         # plt.show()
 
-        
             
 
 
@@ -813,10 +903,11 @@ if __name__ == "__main__":
     tiles_loader = TilesLoader(cfg)
 
     # list_to_drop = ["color_grp_full_tile_568.laz", "color_grp_full_tile_504.laz"]
-    list_to_drop = [x for x in os.listdir(os.path.join(cfg_tilesloader.tiles_loader.root_src, cfg_tilesloader.tiles_loader.evaluate.run_src, "pseudo_labels")) if x.endswith('.laz')]
+    # list_to_drop = [x for x in os.listdir(os.path.join(cfg_tilesloader.tiles_loader.root_src, cfg_tilesloader.tiles_loader.evaluate.run_src, "pseudo_labels")) if x.endswith('.laz')]
 
-    tiles_loader.evaluate(list_to_drop, verbose=True)
-    quit()
+    # tiles_loader.evaluate(list_to_drop, verbose=True)
+    # tiles_loader.preprocess()
+    # quit()
 
     if len(sys.argv) > 1:
 
@@ -831,6 +922,8 @@ if __name__ == "__main__":
         #print("Mode: ", mode, "\nverbose: ", verbose)
         #quit()
 
+        if mode == 'preprocess':
+            tiles_loader.preprocess(verbose='verbose')
         if mode == "tilling":
             tiles_loader.tilling(verbose=verbose)
         elif mode == "trimming":
@@ -838,7 +931,7 @@ if __name__ == "__main__":
         elif mode == "classification":
             tiles_loader.classify(verbose=verbose)
         elif mode == "evaluate":
-            TilesLoader.e
+            tiles_loader.evaluate(verbose=verbose)
         else:
             pass
         quit()

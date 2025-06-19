@@ -1,14 +1,14 @@
 tiles_loader:
   root_src: /home/pdm
-  original_file_path: data/dataset_pipeline/tiles_1/color_grp_full_tile_504.laz
-  results_destination: data/dataset_pipeline/tiles_1/results
+  original_file_path: data/full_dataset/color_grp_full.laz
+  results_destination: data/full_dataset/all_tiles
   tiles_destination: ${tiles_loader.results_destination}/dataset_full_${tiles_loader.tiling.tile_size}m
   preprocess:
     do_remove_hanging_points: True
     do_flatten: True
     do_remove_duplicates: True
   tiling:
-    tile_size: 20
+    tile_size: 100
     pack_size: 1
   trimming:
     method: tree  # choose between {'drop', 'tree'}
@@ -18,4 +18,5 @@ tiles_loader:
     run_src: results/trainings_saved/20250601_142133_with_instance_splitting
     cluster_src: data/full_dataset/all_tiles/dataset_full_100m
     cluster_csv_path: data/full_dataset/selection/clustered.csv
+    tiles_to_remove: []
     
