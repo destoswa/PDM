@@ -1,8 +1,8 @@
 pipeline:
   root_src: /home/pdm
   results_root_src: results/trainings
-  result_src_name_suffixe: test_classifier_corr_in_pseudo_labels
-  num_loops: 5
+  result_src_name_suffixe: flatten_with_split_correction_long
+  num_loops: 20
   train_frac: 0.7
   val_frac: 0.15
   test_frac: 0.15
@@ -12,10 +12,10 @@ pipeline:
     save_pseudo_labels_per_loop: True
     do_remove_hanging_points: True
     do_flatten: True
-    flatten_tile_size: 1
+    flatten_tile_size: 10
     src_floors: /home/pdm/data/dataset_pipeline/tiles_20/floors
   preload:
     do_continue_from_existing: False
-    src_existing: /home/pdm/results/trainings/20250617_133946_test_pseudo_labels_splitting
+    src_existing: /home/pdm/results/trainings/20250619_115127_flatten_with_split_correction
   debugging:
     keep_previous_data: False

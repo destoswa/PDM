@@ -5,7 +5,7 @@ batch_size: 1
 cuda: 0
 weight_name: latest
 enable_cudnn: true
-checkpoint_dir: /home/pdm/results/trainings/20250618_132215_test_classifier_corr_in_pseudo_labels/1
+checkpoint_dir: /home/pdm/models/SegmentAnyTree/model_file
 model_name: PointGroup-PAPER
 precompute_multi_scale: true
 enable_dropout: false

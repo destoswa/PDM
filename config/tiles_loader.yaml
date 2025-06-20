@@ -1,8 +1,8 @@
 tiles_loader:
   root_src: /home/pdm
   original_file_path: data/full_dataset/color_grp_full.laz
-  results_destination: data/full_dataset/all_tiles
-  tiles_destination: ${tiles_loader.results_destination}/dataset_full_${tiles_loader.tiling.tile_size}m
+  results_destination: data/full_dataset
+  tiles_destination: ${tiles_loader.results_destination}/dataset_full_${tiles_loader.tiling.tile_size}m_no_hanging_points
   preprocess:
     do_remove_hanging_points: True
     do_flatten: True

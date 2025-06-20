@@ -750,19 +750,26 @@ class Pipeline():
                             # Splitting
                             dict_monitoring["splitting_using_pca"] += 1
                             other_tree_mask = new_file.treeID == instance
-                            mask, new_other_tree_mask = Pipeline.split_instances(new_file, mask, other_tree_mask)
-
+                            intersection_mask = mask & other_tree_mask
+                            if np.sum(intersection_mask) > 1:
+                                mask, new_other_tree_mask = Pipeline.split_instances(new_file, mask, other_tree_mask)
+                            else:
+                                # print("Size of other: ", np.sum(other_tree_mask))
+                                # print("Size of intersection: ", np.sum(intersection_mask))
+                                new_other_tree_mask = (other_tree_mask.astype(int) - intersection_mask.astype(int)).astype(bool)
+                                # print("New size of other: ", np.sum(new_other_tree_mask)) 
+                                # quit()
                             # Check if splitted instances are still predicted as trees
                             tree_1 = pointCloud[mask]
                             tree_2 = pointCloud[new_other_tree_mask]
-                            print("New tree shape: ", tree_1.shape)
-                            print("Other tree shape: ", tree_2.shape)
+                            # print("New tree shape: ", tree_1.shape)
+                            # print("Other tree shape: ", tree_2.shape)
                             preds_classifier = fast_inference([tree_1, tree_2], args_classifier)
 
                             # Stop adding the new instance if any of the two are not predicted as tree anymore
                             if np.any(np.argmax(preds_classifier, axis=1) != 2):
                                 dict_monitoring["not_a_tree_after_splitting"] += 1
-                                print("NOT A NEW TREE AFTER SPLITTING")
+                                # print("NOT A NEW TREE AFTER SPLITTING")
                                 is_new_tree = False
                                 break
 

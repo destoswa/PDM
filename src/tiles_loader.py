@@ -27,10 +27,13 @@ from format_conversions import convert_all_in_folder
 
 if __name__ == "__main__":
     sys.path.append(os.getcwd())
+try:
+    ENV = os.environ['CONDA_DEFAULT_ENV']
+    if ENV == "pdal_env":
+        import pdal
+except:
+    pass
 
-ENV = os.environ['CONDA_DEFAULT_ENV']
-if ENV == "pdal_env":
-    import pdal
 
 # @staticmethod
 # def remove_hanging_points_compare(points_pos_in_container, container, threshold, point_id):
@@ -906,8 +909,8 @@ if __name__ == "__main__":
     # list_to_drop = [x for x in os.listdir(os.path.join(cfg_tilesloader.tiles_loader.root_src, cfg_tilesloader.tiles_loader.evaluate.run_src, "pseudo_labels")) if x.endswith('.laz')]
 
     # tiles_loader.evaluate(list_to_drop, verbose=True)
-    # tiles_loader.preprocess()
-    # quit()
+    tiles_loader.preprocess(verbose=False)
+    quit()
 
     if len(sys.argv) > 1:
 

@@ -4,9 +4,12 @@ import numpy as np
 from tqdm import tqdm
 import json
 import laspy
-ENV = os.environ['CONDA_DEFAULT_ENV']
-if ENV == "pdal_env":
-    import pdal
+try:
+    ENV = os.environ['CONDA_DEFAULT_ENV']
+    if ENV == "pdal_env":
+        import pdal
+except:
+    pass
 import concurrent.futures
 from functools import partial
 

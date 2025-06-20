@@ -36,6 +36,7 @@ def main(cfg):
     DO_REMOVE_HANGING_POINTS = cfg.pipeline.processes.do_remove_hanging_points
     DO_FLATTEN = cfg.pipeline.processes.do_flatten
     FLATTEN_TILE_SIZE = cfg.pipeline.processes.flatten_tile_size
+    DO_CONTINUE_FROM_EXISTING = cfg.pipeline.preload.do_continue_from_existing
 
     # assertions
     assert TRAIN_FRAC + TEST_FRAC + VAL_FRAC == 1.0
@@ -47,7 +48,7 @@ def main(cfg):
     if DO_REMOVE_HANGING_POINTS:
         pass
 
-    if DO_FLATTEN:
+    if DO_FLATTEN and not DO_CONTINUE_FROM_EXISTING:
         os.makedirs(os.path.join(DATA_SRC, "originals"), exist_ok=True)
         flattening(DATA_SRC, os.path.join(DATA_SRC, "originals"), FLATTEN_TILE_SIZE)
 
@@ -130,7 +131,7 @@ def main(cfg):
         pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
 
         # create pseudo-labels
-        pipeline.create_pseudo_labels(verbose=True)
+        pipeline.create_pseudo_labels(verbose=False)
         
         # compute stats on tiles
         pipeline.stats_on_tiles()
