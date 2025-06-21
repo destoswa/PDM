@@ -50,7 +50,7 @@ def main(cfg):
 
     if DO_FLATTEN and not DO_CONTINUE_FROM_EXISTING:
         os.makedirs(os.path.join(DATA_SRC, "originals"), exist_ok=True)
-        flattening(DATA_SRC, os.path.join(DATA_SRC, "originals"), FLATTEN_TILE_SIZE)
+        flattening(DATA_SRC, os.path.join(DATA_SRC, "originals"), FLATTEN_TILE_SIZE, verbose_full=False)
 
     # create pipeline
     pipeline = Pipeline(cfg) 
@@ -169,6 +169,21 @@ def main(cfg):
 
     
 if __name__ == "__main__":
+
+    # dir_target = "../data/dataset_pipeline/tiles_20/loops/1/preds/color_grp_full_tile_124_out_split_instance"
+    # from src.format_conversions import convert_all_in_folder
+    # for file in [x for x in os.listdir('data/dataset_pipeline/tiles_20/loops/1/preds') if x.endswith(".laz")]:
+    #     print(file)
+    #     test = laspy.read(os.path.join('data/dataset_pipeline/tiles_20/loops/1/preds', file))
+    # convert_all_in_folder(
+    #                 src_folder_in=dir_target, 
+    #                 src_folder_out=os.path.normpath(dir_target) + "/data", 
+    #                 in_type='laz', 
+    #                 out_type='pcd',
+    #                 verbose=True
+    #                 )
+    # exit()
+
     cfg_dataset = OmegaConf.load('./config/dataset.yaml')
     cfg_preprocess = OmegaConf.load('./config/preprocessing.yaml')
     cfg_pipeline = OmegaConf.load('./config/pipeline.yaml')

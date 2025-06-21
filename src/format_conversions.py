@@ -121,9 +121,12 @@ def convert_all_in_folder(src_folder_in, src_folder_out, in_type, out_type, verb
     #     list(tqdm(executor.map(lambda f: process_file(f, src_folder_in, src_folder_out, in_type, out_type), files), total=len(files)))
 
     for _, file in tqdm(enumerate(files), total=len(files), desc=f"Converting {in_type} in {out_type}", disable=~verbose):
-        if file.endswith(in_type):
+        try:
             file_out = file.split(in_type)[0] + out_type
             _ = getattr(Convertions, f"convert_{in_type}_to_{out_type}")(os.path.join(src_folder_in, file), os.path.join(src_folder_out, file_out), verbose=verbose)
+        except Exception as e:
+            print(f"conversion from {in_type} to {out_type} for sample {file} failed")
+            pass
 
 
 if __name__ == "__main__":

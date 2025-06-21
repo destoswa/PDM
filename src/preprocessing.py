@@ -182,6 +182,8 @@ def flattening(src_tiles, src_new_tiles, grid_size=10, verbose=True, verbose_ful
     print("Starting flattening:")
     list_tiles = [x for x in os.listdir(src_tiles) if x.endswith('.laz')]
     for _, tile in tqdm(enumerate(list_tiles), total=len(list_tiles), desc="Processing", disable=verbose==False):
+        if verbose_full:
+            print("Flattening tile: ", tile)
         flattening_tile(
             tile_src=os.path.join(src_tiles, tile), 
             tile_new_original_src=os.path.join(src_new_tiles, tile),
