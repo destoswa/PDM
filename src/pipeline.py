@@ -528,9 +528,25 @@ class Pipeline():
         list_files = [f for f in os.listdir(self.preds_src) if f.endswith(self.file_format)]
         for _, file in tqdm(enumerate(list_files), total=len(list_files), desc="Processing"):
             split_instance(os.path.join(self.preds_src, file), verbose=verbose)
+            dir_target = self.preds_src + '/' + file.split('/')[-1].split('.')[0] + "_split_instance"
+
+            # verify that no file is corrupted
+            for cluster in [x for x in os.listdir(dir_target) if x.endswith(self.file_format)]:
+                try:
+                    laspy.read(os.path.join(dir_target, cluster))
+                except Exception as e:
+                    if verbose:
+                        print(f"Following cluster is corrupted and removed from processing: {os.path.join(dir_target, cluster)}")
+                    self.log += f"Following cluster is corrupted and removed from processing: {os.path.join(dir_target, cluster)} \n"
+                    os.makedirs(os.path.join(dir_target, 'corrupted_files'), exist_ok=True)
+                    os.rename(
+                        os.path.join(dir_target, cluster),
+                        os.path.join(dir_target, 'corrupted_files', cluster)
+                    )
 
             # convert instances to pcd
-            dir_target = self.preds_src + '/' + file.split('/')[-1].split('.')[0] + "_split_instance"
+            # print("Converting all in : ", dir_target)
+            # try:
             convert_all_in_folder(
                 src_folder_in=dir_target, 
                 src_folder_out=os.path.normpath(dir_target) + "/data", 
@@ -538,6 +554,33 @@ class Pipeline():
                 out_type='pcd',
                 verbose=verbose
                 )
+            # except Exception as e:
+            #     print("Error : ", e)
+            #     print("Try to resegment... ")
+            #     temp_seg_src = os.path.join(self.root_src, self.data_src, 'temp_seg')
+            #     original_file_src = os.path.join(self.result_pseudo_labels_dir, self.data_src, file)
+            #     temp_file_src = os.path.join(temp_seg_src, file)
+            #     shutil.copyfile(original_file_src, temp_file_src)
+
+            #     os.makedirs(temp_seg_src, exist_ok=True)
+            #     return_code = self.run_subprocess(
+            #         src_script=self.segmenter_root_src,
+            #         script_name="./run_oracle_pipeline.sh",
+            #         params= [temp_seg_src, temp_seg_src],
+            #         verbose=verbose
+            #         )
+            #     # catch errors
+            #     if return_code == 0:
+            #         # unzip results
+            #         if verbose:
+            #             print("Unzipping results...")
+            #         self.unzip_laz_files(
+            #             zip_path=os.path.join(temp_seg_src, "results.zip"),
+            #             extract_to=self.preds_src,
+            #             delete_zip=True
+            #             )
+            #     else:
+            #         print("Did not manage to resegment!")
             
             # makes predictions
             input_folder = dir_target
