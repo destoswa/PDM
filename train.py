@@ -52,8 +52,6 @@ def main(cfg):
         os.makedirs(os.path.join(DATA_SRC, "originals"), exist_ok=True)
         flattening(DATA_SRC, os.path.join(DATA_SRC, "originals"), FLATTEN_TILE_SIZE)
 
-
-
     # create pipeline
     pipeline = Pipeline(cfg) 
 

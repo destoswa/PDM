@@ -54,7 +54,7 @@ class Pipeline():
         # config regarding preprocess
         self.do_flatten = cfg.pipeline.processes.do_flatten
         self.flatten_tile_size = cfg.pipeline.processes.flatten_tile_size
-        self.do_remove_hanging_points = cfg.pipeline.processes.do_remove_hanging_points
+        # self.do_remove_hanging_points = cfg.pipeline.processes.do_remove_hanging_points
 
         # config regarding inference
         self.inference = cfg.segmenter.inference
@@ -93,6 +93,7 @@ class Pipeline():
         self.result_current_loop_dir = os.path.join(self.result_dir, str(self.current_loop))
         self.result_pseudo_labels_dir = os.path.join(self.result_dir, 'pseudo_labels/')
 
+
         #   _remove data processes if necessary
         if not cfg.pipeline.debugging.keep_previous_data and not cfg.pipeline.preload.do_continue_from_existing and os.path.exists(os.path.join(self.data_src, 'loops')):
             shutil.rmtree(os.path.join(self.data_src, 'loops'))
@@ -104,6 +105,10 @@ class Pipeline():
         os.makedirs(self.result_dir, exist_ok=True)
         os.makedirs(self.result_pseudo_labels_dir, exist_ok=True)
         os.makedirs(self.result_current_loop_dir, exist_ok=True)
+
+        #   _add copy of cfg in results
+        with open(os.path.join(self.result_dir, "configuration.yaml"), 'w+') as file:
+            OmegaConf.save(config=cfg, f=file.name)
 
         # config regarding metrics
         #   _ training metrics
