@@ -108,19 +108,7 @@ def main(cfg):
         pipeline.segment(verbose=False)
         pipeline.save_log(pipeline.result_current_loop_dir, clear_after=False)
 
-        # create csv for files referencing
-        # num_train = int(len(pipeline.tiles_to_process) * (TRAIN_FRAC + VAL_FRAC))
-        # train_test_split = random.sample(range(len(pipeline.tiles_to_process)), num_train)
-        
-        # lst_split_data = []
-        # for id_f, f in enumerate(pipeline.tiles_to_process):
-        #     new_row = [ f, 'ARPETTE']
-        #     if id_f in train_test_split:
-        #         new_row.append('train')
-        #     else:
-        #         new_row.append('test')
-        #     lst_split_data.append(new_row)
-
+        # create dummy csv for files referencing
         df_split_data = pd.DataFrame()
         df_split_data.to_csv(os.path.join(pipeline.result_pseudo_labels_dir, 'data_split_metadata.csv'), sep=',', index=False)
         
@@ -133,6 +121,9 @@ def main(cfg):
         
         # compute stats on tiles
         pipeline.stats_on_tiles()
+
+        if DO_FLATTEN:
+            pipeline.result_pseudo_labels_dir = pipeline.original_result_pseudo_labels_dir
 
         # save logs
         pipeline.save_log(pipeline.result_current_loop_dir, clear_after=True)

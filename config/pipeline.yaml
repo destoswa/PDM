@@ -20,8 +20,8 @@ pipeline:
   debugging:
     keep_previous_data: False
   eval_on_gt:
-    src_existing: results/trainings_saved/20250616_172514_flatten
+    src_existing: results/trainings_saved/20250621_221244_flatten_with_split_correction_long
     src_data_gt: data/gt
     results_root_src: results/eval
-    result_src_name_suffixe: test
+    result_src_name_suffixe: flatten_with_split_correction_long
 

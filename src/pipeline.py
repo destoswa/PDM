@@ -628,7 +628,7 @@ class Pipeline():
         args_classifier = OmegaConf.load("./models/KDE_classifier/config/inference.yaml")
 
         # loop on samples
-        dict_monitoring = {x:0 for x in ['total', 'new_instance', 'is_ground', 'same_heighest_point', 'overlapping_greater_than_2', 'i_o_new_tree_greater_than_70_per', 'splitting_using_pca', 'not_a_tree_after_splitting']}
+        dict_monitoring = {x:0 for x in ['total', 'new_instance', 'is_ground', 'same_heighest_point', 'overlapping_greater_than_2', 'i_o_new_tree_greater_than_70_per', 'i_o_other_tree_greater_than_70_per', 'splitting_using_pca', 'not_a_tree_after_splitting']}
         list_folders = [x for x in os.listdir(self.preds_src) if os.path.abspath(os.path.join(self.preds_src, x)) and x.endswith('instance')]
         for _, child in tqdm(enumerate(list_folders), total=len(list_folders), desc='Processing'):
             if verbose:
@@ -636,10 +636,10 @@ class Pipeline():
             
             # load original file
             # original_file_src = os.path.join(self.data_src, child.split('_out')[0] + '.' + self.file_format)
-            if self.do_flatten:
-                original_file_src = os.path.join(self.result_pseudo_labels_dir, child.split('_out')[0] + '.' + self.file_format)
-            else:
-                original_file_src = os.path.join(self.result_pseudo_labels_dir, child.split('_out')[0] + '.' + self.file_format)
+            # if self.do_flatten:
+            #     original_file_src = os.path.join(self.result_pseudo_labels_dir, child.split('_out')[0] + '.' + self.file_format)
+            # else:
+            original_file_src = os.path.join(self.result_pseudo_labels_dir, child.split('_out')[0] + '.' + self.file_format)
             original_file = laspy.read(original_file_src)
 
             # load prediction file
@@ -658,7 +658,6 @@ class Pipeline():
             original_file = Pipeline.remove_duplicates(original_file)
             new_file = Pipeline.remove_duplicates(new_file)
             pred_file = Pipeline.remove_duplicates(pred_file)
-
             Pipeline.match_pointclouds(new_file, pred_file)
 
             coords_A = np.stack((original_file.x, original_file.y, original_file.z), axis=1)
@@ -700,9 +699,6 @@ class Pipeline():
                 results = list(tqdm(executor.map(partialFunc, range(len(self.classified_clusters))), total=len(self.classified_clusters), smoothing=0.9, desc="Updating pseudo-label", disable=~verbose))
             
             # Update the original file based on results and update the csv file with ref to trees
-            # print(dict_reasons_of_rejection)
-            # print(pd.DataFrame(index=dict_reasons_of_rejection.keys(), data=dict_reasons_of_rejection.values()))
-            # quit()
             id_new_tree = len(set(new_file.treeID))
             for id_tree, (mask, value) in tqdm(enumerate(results), total=len(results), desc='temp', disable=~verbose):
                 if verbose:
@@ -756,7 +752,6 @@ class Pipeline():
                         # Get intersection
                         intersection_mask = mask & other_tree_mask
                         if np.sum(intersection_mask) > 1:
-                            # Intersection = np.vstack((new_file_x[intersection_mask], new_file_y[intersection_mask], new_file_z[intersection_mask]))
                             intersection = np.concatenate((new_file_x, new_file_y), axis=1)[intersection_mask]
                             if verbose:
                                 print(f"Comparing to existing tree with id {instance} of size {np.sum(other_tree_mask)} and intersection of size {np.sum(intersection_mask)}")
@@ -773,6 +768,11 @@ class Pipeline():
                         if np.sum(intersection_mask) / np.sum(mask) > 0.7:
                             is_new_tree = False
                             dict_monitoring["i_o_new_tree_greater_than_70_per"] += 1
+
+                        # Intersection over other tree
+                        if np.sum(intersection_mask) / np.sum(other_tree_mask) > 0.7:
+                            is_new_tree = False
+                            dict_monitoring["i_o_other_tree_greater_than_70_per"] += 1
                             
                         if is_new_tree == False:
                             dict_monitoring["total"] += 1
@@ -802,22 +802,15 @@ class Pipeline():
                             if np.sum(intersection_mask) > 1:
                                 mask, new_other_tree_mask = Pipeline.split_instances(new_file, mask, other_tree_mask)
                             else:
-                                # print("Size of other: ", np.sum(other_tree_mask))
-                                # print("Size of intersection: ", np.sum(intersection_mask))
                                 new_other_tree_mask = (other_tree_mask.astype(int) - intersection_mask.astype(int)).astype(bool)
-                                # print("New size of other: ", np.sum(new_other_tree_mask)) 
-                                # quit()
                             # Check if splitted instances are still predicted as trees
                             tree_1 = pointCloud[mask]
                             tree_2 = pointCloud[new_other_tree_mask]
-                            # print("New tree shape: ", tree_1.shape)
-                            # print("Other tree shape: ", tree_2.shape)
                             preds_classifier = fast_inference([tree_1, tree_2], args_classifier)
 
                             # Stop adding the new instance if any of the two are not predicted as tree anymore
                             if np.any(np.argmax(preds_classifier, axis=1) != 2):
                                 dict_monitoring["not_a_tree_after_splitting"] += 1
-                                # print("NOT A NEW TREE AFTER SPLITTING")
                                 is_new_tree = False
                                 break
 
@@ -973,8 +966,6 @@ class Pipeline():
         # run training script
         model_checkpoint = self.model_checkpoint_src if self.model_checkpoint_src != None else "/home/pdm/models/SegmentAnyTree/model_file"
         # model_checkpoint = "/home/pdm/models/SegmentAnyTree/model_file"
-        # print(self.model_checkpoint_src)
-        # print(model_checkpoint)
         self.run_subprocess(
             src_script="/home/pdm/models/SegmentAnyTree/",
             script_name="./run_pipeline.sh",

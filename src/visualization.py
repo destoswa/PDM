@@ -85,20 +85,25 @@ def show_inference_counts(data_src, src_location=None, show_figure=True, save_fi
     df_data = pd.read_csv(data_src, sep=';')
     sums = df_data[["num_loop", "num_predictions", "num_garbage", "num_multi", "num_single"]].groupby('num_loop').sum()
     fractions = sums[["num_garbage", "num_multi", "num_single"]].div(sums["num_predictions"], axis=0)
-    num_problematic = df_data[['num_loop', 'is_problematic']].groupby('num_loop').sum()
+    # num_problematic = df_data[['num_loop', 'is_problematic']].groupby('num_loop').sum()
+    # num_empty = df_data[['num_loop', 'is_empty']].groupby('num_loop').sum()
 
-    num_empty = df_data[['num_loop', 'is_empty']].groupby('num_loop').sum()
-    fig, axs = plt.subplots(2,2, figsize=(12,12))
+    fig, axs = plt.subplots(1,2, figsize=(12,6))
     axs = axs.flatten()
-    for i, data in enumerate([sums.drop('num_predictions', axis=1), fractions, num_problematic, num_empty]):
+    # for i, data in enumerate([sums.drop('num_predictions', axis=1), fractions, num_problematic, num_empty]):
+    for i, data in enumerate([sums.drop('num_predictions', axis=1), fractions]):
         df = pd.DataFrame(data)
         for col in df.columns:
             axs[i].plot(np.array(df.index), np.array(df[col]), label=col)
             axs[i].legend()
     axs[0].set_title('Count of the differente types of predictions')
     axs[1].set_title('Fraction over number of predictions')
-    axs[2].set_title('Number of problematic samples')
-    axs[3].set_title('Number of empty samples')
+    # axs[2].set_title('Number of problematic samples')
+    # axs[3].set_title('Number of empty samples')
+    
+    # set limits
+    axs[0].set_ylim([0,np.max(sums.drop('num_predictions', axis=1).max().values)*1.1])
+    axs[1].set_ylim([0,1])
 
     plt.tight_layout()
     if save_figure and src_location != None:
@@ -107,6 +112,39 @@ def show_inference_counts(data_src, src_location=None, show_figure=True, save_fi
     if show_figure:
         plt.show()
 
+
+def show_problematic_empty(data_src, src_location=None, show_figure=True, save_figure=False):
+    df_data = pd.read_csv(data_src, sep=';')
+    # sums = df_data[["num_loop", "num_predictions", "num_garbage", "num_multi", "num_single"]].groupby('num_loop').sum()
+    # fractions = sums[["num_garbage", "num_multi", "num_single"]].div(sums["num_predictions"], axis=0)
+    num_problematic = df_data[['num_loop', 'is_problematic']].groupby('num_loop').sum()
+    num_empty = df_data[['num_loop', 'is_empty']].groupby('num_loop').sum()
+
+    fig, axs = plt.subplots(1,2, figsize=(12,6))
+    axs = axs.flatten()
+    # for i, data in enumerate([sums.drop('num_predictions', axis=1), fractions, num_problematic, num_empty]):
+    for i, data in enumerate([num_problematic, num_empty]):
+        df = pd.DataFrame(data)
+        for col in df.columns:
+            axs[i].plot(np.array(df.index), np.array(df[col]), label=col)
+            axs[i].legend()
+    # axs[0].set_title('Count of the differente types of predictions')
+    # axs[1].set_title('Fraction over number of predictions')
+    axs[0].set_title('Number of problematic samples')
+    axs[1].set_title('Number of empty samples')
+    
+    # # set limits
+    # print(np.max(sums.drop('num_predictions', axis=1).max().values))
+
+    # axs[0].set_ylim([0,np.max(sums.drop('num_predictions', axis=1).max().values)*1.1])
+    # axs[1].set_ylim([0,1])
+
+    plt.tight_layout()
+    if save_figure and src_location != None:
+        plt.savefig(src_location)
+
+    if show_figure:
+        plt.show()
 
 def show_inference_metrics(data_src, metrics = ['PQ', 'SQ', 'RQ', 'Pre', 'Rec'], src_location=None, show_figure=True, save_figure=False):
     abrev_to_name = {
@@ -310,12 +348,12 @@ if __name__ == '__main__':
     src_data_train = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250610_152526_training_with_big_batch_size\training_metrics.csv"
     src_data_inf = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250610_152526_training_with_big_batch_size\inference_metrics.csv"
     src_data_semantic = r"D:\PDM_repo\Github\PDM\results\trainings_saved\20250610_152526_training_with_big_batch_size"
+
     # src_data_train = r"/home/pdm/results/trainings/20250611_095825_training_with_flattening/training_metrics.csv"
     # src_data_inf = r"/home/pdm/results/trainings/20250611_095825_training_with_flattening/inference_metrics.csv"
     # src_data_semantic = r"/home/pdm/results/trainings/20250611_095825_training_with_flattening"
     show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), save_figure=True, show_figure=False)
-    # quit()
-    # print(loops)
     show_global_metrics(src_data_train, src_location=os.path.join(src_data_semantic, "images/training_metrics.png"), save_figure=True, show_figure=False)
     show_inference_counts(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_count.png"), save_figure=True, show_figure=False)
+    show_problematic_empty(src_data_inf, src_location=os.path.join(src_data_semantic, "images/problematic_empty.png"), save_figure=True, show_figure=False)
     show_inference_metrics(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_metrics.png"), save_figure=True, show_figure=False)
