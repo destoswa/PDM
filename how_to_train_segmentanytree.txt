@@ -5,7 +5,19 @@ docker run --gpus all -it --rm -v /mnt/data/PDM_repo/Github/SegmentAnyTree:/home
 
 
 
+docker run --gpus all -it --rm -v /mnt/data/PDM_repo/Github/SegmentAnyTree:/home/nibio/mutable-outside-world segment-any-tree
+docker run --gpus all -it --rm -v D:/PDM_repo/Github/SegmentAnyTree:/home/nibio/mutable-outside-world segment-any-tree
+docker run --gpus all --runtime nvidia -it --rm -v D:/PDM_repo/Github/PDM:/home/pdm pdm
+docker run --gpus all --shm-size=8g -it --rm -v D:/PDM_repo/Github/PDM:/home/pdm pdm
 
+D:/PDM_repo/Github/PDM/data/flattening_predictions/predictions_2
+
+
+docker run --rm -it --gpus all -v D:/PDM_repo/Github/SegmentAnyTree:/home/nibio/mutable-outside-world segment-any-tree
+
+docker run --rm --gpus all --name test_e2e_instance --mount 
+bash run_oracle_pipeline.sh 
+type=bind,source=D:/PDM_repo/Github/SegmentAnyTree/data/inference/test/,target=/home/nibio/mutable-outside-world/bucket_in_folder --mount 
 
 
 
