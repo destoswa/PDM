@@ -145,7 +145,7 @@ def main(cfg):
         )
 
     # show metrics
-    pipeline.visualization()
+    pipeline.visualization(with_training=False, with_gt=True)
 
     # show time to full process
     delta_time_process = time() - time_start_process

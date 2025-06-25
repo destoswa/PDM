@@ -9,6 +9,8 @@ eval "$(conda shell.bash hook)"
 MODE="$1"
 VERBOSE="$2"
 
+echo "$1"
+
 if [ "$VERBOSE" == "" ]; then
     VERBOSE=False
 fi
@@ -37,7 +39,7 @@ activate_and_run(){
 # call the different functions depending on the mode
 if [ "$MODE" == "full" ]; then
     activate_and_run "pdal_env" "tilling" "$VERBOSE"
-    activate_and_run "pdm_env" "preprocess "$VERBOSE"
+    activate_and_run "pdm_env" "preprocess" "$VERBOSE"
     activate_and_run "pdm_env" "trimming" "$VERBOSE"
     activate_and_run "pdal_env" "classification" "$VERBOSE"
 elif [ "$MODE" == "trim_and_class" ]; then
@@ -53,7 +55,7 @@ elif [ "$MODE" == "trimming" ]; then
 elif [ "$MODE" == "classification" ]; then
     activate_and_run "pdal_env" "classification" "$VERBOSE"
 elif [ "$MODE" == "preprocess" ]; then
-    activate_and_run "pdm_env" "preprocess "$VERBOSE"
+    activate_and_run "pdm_env" "preprocess" "$VERBOSE"
 else
     echo "WRONG ARGUMENT!"
     exit 1

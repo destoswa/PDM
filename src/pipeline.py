@@ -22,7 +22,7 @@ if __name__ == "__main__":
 from src.format_conversions import convert_all_in_folder
 from src.pseudo_labels_creation import update_attribute_where_cluster_match
 from src.metrics import compute_classification_results, compute_panoptic_quality, compute_mean_iou
-from src.visualization import show_global_metrics, show_inference_counts, show_inference_metrics, show_pseudo_labels_evolution
+from src.visualization import show_global_metrics, show_inference_counts, show_inference_metrics, show_pseudo_labels_evolution, show_pseudo_labels_vs_gt, show_training_losses, show_stages_losses
 from src.splitting import split_instance
 from src.fast_inference import fast_inference
 # from models.KDE_classifier.inference import inference
@@ -152,6 +152,9 @@ class Pipeline():
                 self.inference_metrics = pd.read_csv(self.inference_metrics_src, sep=';')
             else:
                 self.inference_metrics.to_csv(self.inference_metrics_src, sep=';', index=False)
+
+        # testing
+        assert len([x for x in os.path.join(self.root_src, self.data_src) if x.endswith(self.file_format)]) > 0     # dataset is not empty
 
     @staticmethod
     def unzip_laz_files(zip_path, extract_to=".", delete_zip=True):
@@ -524,7 +527,11 @@ class Pipeline():
             #         os.path.join(self.data_src, tile),
             #         os.path.join(self.preds_src, tile.split('.laz')[0] + '_out.laz'),
             #     )
+            shutil.copytree(self.preds_src, os.path.join(self.result_current_loop_dir, os.path.basename(self.preds_src)))
             self.preds_src = original_preds_src
+            
+        # copy preds to results
+        shutil.copytree(self.preds_src, os.path.join(self.result_current_loop_dir, os.path.basename(self.preds_src)))
     
     def classify(self, verbose=False):
         print("Starting classification:")
@@ -686,6 +693,8 @@ class Pipeline():
             self.classified_clusters = []
             for _, row in df_results.iterrows():
                 cluster_path = os.path.join(full_path, row.file_name.split('.pcd')[0] + '.' + self.file_format)
+                if not os.path.exists(cluster_path):
+                    continue
                 cluster = laspy.open(cluster_path, mode='r').read()
                 coords_B = np.stack((cluster.x, cluster.y, cluster.z), axis=1)
                 coords_B_view = coords_B.view([('', coords_B.dtype)] * 3).reshape(-1)
@@ -985,28 +994,23 @@ class Pipeline():
         if self.do_flatten:
             self.result_pseudo_labels_dir = self.original_result_pseudo_labels_dir
 
-    def visualization(self):
+    def visualization(self, with_training=True, with_gt=False):
         print("Saving plots:")
         
         # creates location
         location_src = os.path.join(self.result_dir, "images")
         os.makedirs(location_src, exist_ok=True)
-        
-        show_global_metrics(
-            data_src=self.training_metrics_src,
-            src_location=os.path.join(location_src, 'training_metrics.png'),
-            show_figure=False,
-            save_figure=True,
-            )
-        show_inference_counts(
-            data_src=self.inference_metrics_src,
-            src_location=os.path.join(location_src, 'inference_count.png'),
-            show_figure=False,
-            save_figure=True,
-            )
+
+        # create plots
         show_inference_metrics(
             data_src=self.inference_metrics_src,
             src_location=os.path.join(location_src, 'inference_metrics.png'),
+            show_figure=False,
+            save_figure=True,
+            )        
+        show_inference_counts(
+            data_src=self.inference_metrics_src,
+            src_location=os.path.join(location_src, 'inference_count.png'),
             show_figure=False,
             save_figure=True,
             )
@@ -1016,6 +1020,32 @@ class Pipeline():
             show_figure=False,
             save_figure=True,
         )
+        if with_training:
+            show_global_metrics(
+                data_src=self.training_metrics_src,
+                src_location=os.path.join(location_src, 'training_metrics.png'),
+                show_figure=False,
+                save_figure=True,
+                )
+            show_training_losses(
+                data_src=self.training_metrics_src, 
+                src_location=os.path.join(self.training_metrics_src, "images/training_losses.png"), 
+                show_figure=False,
+                save_figure=True, 
+                )
+            show_stages_losses(
+                self.training_metrics_src, 
+                src_location=os.path.join(self.training_metrics_src, "images/stages_losses.png"), 
+                show_figure=False,
+                save_figure=True, 
+                )
+        if with_gt:
+            show_pseudo_labels_vs_gt(
+                data_folder=self.result_dir,
+                src_location=os.path.join(location_src, "peudo_labels_vs_gt.png"),
+                show_figure=False,
+                save_figure=True,
+            )
 
     def save_log(self, dest, clear_after=True, verbose=False):
         if verbose:
