@@ -4,28 +4,21 @@ import shutil
 import zipfile
 import numpy as np
 import pandas as pd
-import pickle
-# import pdal
-import json
 import laspy
 import subprocess
-from copy import deepcopy
 from datetime import datetime
 from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from omegaconf import OmegaConf
-from scipy.spatial import cKDTree
 from sklearn.decomposition import PCA
 if __name__ == "__main__":
     sys.path.append(os.getcwd())
 from src.format_conversions import convert_all_in_folder
-from src.pseudo_labels_creation import update_attribute_where_cluster_match
-from src.metrics import compute_classification_results, compute_panoptic_quality, compute_mean_iou
+from src.metrics import compute_classification_results, compute_panoptic_quality
 from src.visualization import show_global_metrics, show_inference_counts, show_inference_metrics, show_pseudo_labels_evolution, show_pseudo_labels_vs_gt, show_training_losses, show_stages_losses
 from src.splitting import split_instance
 from src.fast_inference import fast_inference
-# from models.KDE_classifier.inference import inference
 
 
 class Pipeline():
@@ -154,7 +147,7 @@ class Pipeline():
                 self.inference_metrics.to_csv(self.inference_metrics_src, sep=';', index=False)
 
         # testing
-        assert len([x for x in os.path.join(self.root_src, self.data_src) if x.endswith(self.file_format)]) > 0     # dataset is not empty
+        assert len([x for x in os.listdir(os.path.join(self.root_src, self.data_src)) if x.endswith(self.file_format)]) > 0     # dataset is not empty
 
     @staticmethod
     def unzip_laz_files(zip_path, extract_to=".", delete_zip=True):
@@ -519,14 +512,6 @@ class Pipeline():
             self.data_src = self.data_src.split('/flatten')[0]
             self.tiles_to_process = original_tiles_to_process
 
-            # replace flatten preds with original tiles with preds
-            # os.rename(self.preds_src, self.preds_src + "_flatten")
-            # os.makedirs(self.preds_src)
-            # for tile in self.tiles_to_process:
-            #     shutil.copyfile(
-            #         os.path.join(self.data_src, tile),
-            #         os.path.join(self.preds_src, tile.split('.laz')[0] + '_out.laz'),
-            #     )
             shutil.copytree(self.preds_src, os.path.join(self.result_current_loop_dir, os.path.basename(self.preds_src)))
             self.preds_src = original_preds_src
             
@@ -556,9 +541,6 @@ class Pipeline():
                         os.path.join(dir_target, 'corrupted_files', cluster)
                     )
 
-            # convert instances to pcd
-            # print("Converting all in : ", dir_target)
-            # try:
             convert_all_in_folder(
                 src_folder_in=dir_target, 
                 src_folder_out=os.path.normpath(dir_target) + "/data", 
@@ -566,33 +548,6 @@ class Pipeline():
                 out_type='pcd',
                 verbose=verbose
                 )
-            # except Exception as e:
-            #     print("Error : ", e)
-            #     print("Try to resegment... ")
-            #     temp_seg_src = os.path.join(self.root_src, self.data_src, 'temp_seg')
-            #     original_file_src = os.path.join(self.result_pseudo_labels_dir, self.data_src, file)
-            #     temp_file_src = os.path.join(temp_seg_src, file)
-            #     shutil.copyfile(original_file_src, temp_file_src)
-
-            #     os.makedirs(temp_seg_src, exist_ok=True)
-            #     return_code = self.run_subprocess(
-            #         src_script=self.segmenter_root_src,
-            #         script_name="./run_oracle_pipeline.sh",
-            #         params= [temp_seg_src, temp_seg_src],
-            #         verbose=verbose
-            #         )
-            #     # catch errors
-            #     if return_code == 0:
-            #         # unzip results
-            #         if verbose:
-            #             print("Unzipping results...")
-            #         self.unzip_laz_files(
-            #             zip_path=os.path.join(temp_seg_src, "results.zip"),
-            #             extract_to=self.preds_src,
-            #             delete_zip=True
-            #             )
-            #     else:
-            #         print("Did not manage to resegment!")
             
             # makes predictions
             input_folder = dir_target
@@ -607,7 +562,6 @@ class Pipeline():
                 print(f"WARNING! Subprocess for classification return code {code_return}!!")
             
             # convert predictions to laz
-            # convert_all_in_folder(src_folder_in=output_folder, src_folder_out=output_folder, in_type='pcd', out_type='laz')
             self.run_subprocess(
                 src_script='/home/pdm',
                 script_name="run_format_conversion.sh",
@@ -620,12 +574,6 @@ class Pipeline():
                 if file.endswith('.pcd'):
                     os.remove(os.path.join(output_folder, file))
 
-    # def save_sample(self, laz_file, mask, other_mask, num, destination):
-    #     with open(os.path.join(destination, f'mask{num}.pickle'), 'wb') as file:
-    #         pickle.dump(mask, file)
-    #     with open(os.path.join(destination, f'other_mask{num}.pickle'), 'wb') as file:
-    #         pickle.dump(other_mask, file)
-    #     laz_file.write(os.path.join(destination, f'tile_{num}.laz'))
 
     def create_pseudo_labels(self, verbose=False):
         print("Creating pseudo labels:")
@@ -641,11 +589,6 @@ class Pipeline():
             if verbose:
                 print("Processing sample : ", child)
             
-            # load original file
-            # original_file_src = os.path.join(self.data_src, child.split('_out')[0] + '.' + self.file_format)
-            # if self.do_flatten:
-            #     original_file_src = os.path.join(self.result_pseudo_labels_dir, child.split('_out')[0] + '.' + self.file_format)
-            # else:
             original_file_src = os.path.join(self.result_pseudo_labels_dir, child.split('_out')[0] + '.' + self.file_format)
             original_file = laspy.read(original_file_src)
 
@@ -1029,13 +972,13 @@ class Pipeline():
                 )
             show_training_losses(
                 data_src=self.training_metrics_src, 
-                src_location=os.path.join(self.training_metrics_src, "images/training_losses.png"), 
+                src_location=os.path.join(location_src, "training_losses.png"), 
                 show_figure=False,
                 save_figure=True, 
                 )
             show_stages_losses(
                 self.training_metrics_src, 
-                src_location=os.path.join(self.training_metrics_src, "images/stages_losses.png"), 
+                src_location=os.path.join(location_src, "stages_losses.png"), 
                 show_figure=False,
                 save_figure=True, 
                 )
@@ -1057,62 +1000,3 @@ class Pipeline():
             file.write(self.log)
         if clear_after:
             self.log = ""
-
-if __name__ == "__main__":
-    src = "mnt/data/test/"
-    print(src)
-    print(os.path.dirname(src).split('/')[-1])
-    print(os.path.split(os.path.abspath(src))[-1])
-    quit()
-
-
-
-
-    # a = [1, 2, 3]
-    # b = [4, 5, 6]
-    # c = np.vstack((a,b))
-    # print(c.shape)
-    # quit()
-
-    from time import time
-    import torch
-
-    cfg_dataset = OmegaConf.load('./config/dataset.yaml')
-    cfg_preprocess = OmegaConf.load('./config/preprocessing.yaml')
-    cfg_pipeline = OmegaConf.load('./config/pipeline.yaml')
-    cfg_classifier = OmegaConf.load('./config/classifier.yaml')
-    cfg_segmenter = OmegaConf.load('./config/segmenter.yaml')
-    cfg = OmegaConf.merge(cfg_dataset, cfg_preprocess, cfg_pipeline, cfg_classifier, cfg_segmenter)
-
-    # load pipepline arguments
-    ROOT_SRC = cfg.pipeline.root_src
-
-    # load data
-    NUM_LOOPS = cfg.pipeline.num_loops
-    DATA_SRC = os.path.join(cfg.dataset.project_root_src, cfg.dataset.data_src)
-    FILE_FORMAT = cfg.dataset.file_format
-
-    TRAIN_FRAC = cfg.pipeline.train_frac
-    TEST_FRAC = cfg.pipeline.test_frac
-    VAL_FRAC = cfg.pipeline.val_frac
-
-    # processes
-    # SAVE_PSEUDO_LABELS_PER_LOOP = cfg.pipeline.processes.save_pseudo_labels_per_loop
-
-
-    # assertions
-    assert TRAIN_FRAC + TEST_FRAC + VAL_FRAC == 1.0
-
-    # start timer
-    time_start_process = time()
-
-    # create pipeline
-    # pipeline = Pipeline(cfg) 
-    # pipeline.result_pseudo_labels_dir = r"D:\PDM_repo\Github\PDM\results\trainings\20250505_134754_test\pseudo_labels"
-    # pipeline.data_src = os.path.join(pipeline.data_src, "loops/0")
-    # pipeline.preds_src = os.path.join(pipeline.data_src, "preds")
-    # pipeline.create_pseudo_labels()
-    path = r"D:\PDM_repo\Github\PDM\results\trainings\20250505_151920_test\pseudo_labels\treeinsfused\processed_0.2\train.pt"
-    data, slices = torch.load(path)
-    print(data)
-    print(slice)

@@ -5,7 +5,6 @@ import subprocess
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 from tqdm import tqdm
 import laspy
 from omegaconf import OmegaConf
@@ -14,10 +13,6 @@ import threading
 import json
 import warnings
 import zipfile
-
-
-# from multiprocess import Pool  # instead of concurrent.futures
-# import concurrent.futures
 
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from functools import partial
@@ -34,32 +29,6 @@ try:
 except:
     pass
 
-
-# @staticmethod
-# def remove_hanging_points_compare(points_pos_in_container, container, threshold, point_id):
-#     num_neighboors = 0
-#     pos = points_pos_in_container[point_id]
-#     for dx in range(-1, 2):
-#         for dy in range(-1, 2):
-#             for dz in range(-1, 2):
-#                 x = np.max([pos[0] + dx, 0])
-#                 y = np.max([pos[1] + dy, 0])
-#                 z = np.max([pos[2] + dz, 0])
-#                 num_neighboors += len(container[x][y][z])
-#     if num_neighboors < threshold:
-#         return point_id
-#         # isolated_points.append(point_id)
-#     return -1
-
-# def get_isolated_points(points, points_pos_in_container, container, threshold):
-#     args = range(points.shape[0])
-#     with concurrent.futures.ProcessPoolExecutor() as executor:
-#         fn = partial(remove_hanging_points_compare,
-#                      points_pos_in_container=points_pos_in_container,
-#                      container=container,
-#                      threshold=threshold)
-#         results = list(tqdm(executor.map(fn, args), total=len(args), desc="Finding isolated points"))
-#     return results
 
 class TilesLoader():
     def __init__(self, cfg):
@@ -81,12 +50,6 @@ class TilesLoader():
         self.list_tiles = []
         self.list_pack_of_tiles = []
         self.problematic_tiles = []
-        # self.tiling = cfg.tiling
-        # self.trimming = cfg.trimming
-        # self.preprocess = cfg.preprocess
-        
-        # assert os.path.exists(self.data_src)
-
 
     # ======================
     # === STATIC METHODS ===
@@ -225,29 +188,7 @@ class TilesLoader():
             container[full_pos[0]][full_pos[1]][full_pos[2]].append(points[point_id])
             points_pos_in_container.append(full_pos)
 
-        # find the isolated points
-        # results = get_isolated_points(points, points_pos_in_container, container, threshold)
-
-        # with Pool() as pool:
-        #     partialFunc = partial(self.remove_hanging_points_compare, points_pos_in_container, container, threshold)
-        #     results = list(tqdm(pool.imap(partialFunc, range(points.shape[0])),
-        #                         total=points.shape[0], desc="test"))
-
-        # with ThreadPoolExecutor() as executor:
-        #     partialFunc = partial(self.remove_hanging_points_compare, points_pos_in_container, container, threshold)
-        #     # partialFunc = partial(self.test)
-        #     results = list(tqdm(executor.map(partialFunc, range(points.shape[0])), total=points.shape[0], smoothing=0.9, desc="Updating pseudo-label"))
-
-
-
-
         isolated_points = []
-        # with concurrent.futures.ProcessPoolExecutor() as executor:
-        #     partial_points_pos_in_container = partial(remove_hanging_points_compare, points_pos_in_container, container, threshold)
-        #     args = range(points.shape[0])
-        #     results = list(tqdm(executor.map(partial_points_pos_in_container, args), total=points.shape[0], smoothing=.9, desc="creating caching files"))
-        # isolated_points = [x for x in results if x != -1]
-        # print(f"Number of failing files: {len(num_fails)}")
         for _, point_id in tqdm(enumerate(range(points.shape[0])), total = points.shape[0], desc="Find isolated points", disable=verbose==False):
             num_neighboors = 0
             pos = points_pos_in_container[point_id]
@@ -273,22 +214,13 @@ class TilesLoader():
         laz_in.isolated = np.zeros(len(laz_in), dtype="f4")
         for iso_id in isolated_points:
             laz_in.isolated[iso_id] = 1
-        # src_sample = r"D:\PDM_repo\Github\PDM\data\full_dataset\selection\clusters_4\cluster_2\color_grp_full_tile_586.laz"
-        # new_file_src = os.path.basename(src_sample).split('.laz')[0] + 'voxel_size_2_isolated_th_5.laz'
-        # new_laz_src = os.path.join(os.path.dirname(src_sample), new_file_src)
-        # laz_in = laspy.read(new_laz_src)
+
         mask_isolated = laz_in.isolated == 0
 
         # remove points based on mask
         laz_in.points = laz_in.points[mask_isolated]
         laz_in.write(src_laz_out)
-
-    # @staticmethod
-    # def test(point_id):
-    #     return point_id
     
-    # # @staticmethod
-    # def remove_hanging_points_compare(self, points_pos_in_container, container, threshold, point_id):
         num_neighboors = 0
         pos = points_pos_in_container[point_id]
         for dx in range(-1, 2):
@@ -405,7 +337,7 @@ class TilesLoader():
         #   _verify that all the files of the destination have the same extension
         if len(set([x.split('.')[-1] for x in os.listdir(self.data_dest)])) != 1:
             warnings.warn('It seems like the resulting folder contains files with different extensions!')
-        #   _load
+
         self.list_tiles = [x for x in os.listdir(self.data_dest)]
 
         print("Tiling complete.")
@@ -453,7 +385,6 @@ class TilesLoader():
             shutil.rmtree(temp_seg_src)
         os.makedirs(temp_seg_src)
 
-        # pack_passed = [0,1,0,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,1,0,1,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,1,0,1,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1,1,0,1,0,1,0]
         # loops on samples:
         for _, pack in tqdm(enumerate(self.list_pack_of_tiles), total=len(self.list_pack_of_tiles), desc="Processing"):
             if verbose:
@@ -470,23 +401,13 @@ class TilesLoader():
             # quit()
 
             # segment on it
-            segmentation_results_dir = os.path.join(self.results_dest, "segmented")
             os.makedirs(self.segmentation_results_dir, exist_ok=True)
-            # return_code = self.run_subprocess(
-            #     src_script=self.segmenter_conf.root_model_src,
-            #     script_name="./run_inference.sh",
-            #     params= [temp_seg_src, self.segmentation_results_dir, True],
-            #     verbose=verbose
-            #     )
             return_code = self.run_subprocess(
                 src_script=self.segmenter_conf.root_model_src,
                 script_name="./run_oracle_pipeline.sh",
                 params= [temp_seg_src, self.segmentation_results_dir],
                 verbose=verbose
                 )
-            # quit()
-            # test
-            # return_code = pack_passed[id_pack]
 
             # catch errors
             if return_code != 0:
@@ -505,11 +426,6 @@ class TilesLoader():
                     extract_to=self.segmentation_results_dir,
                     delete_zip=True
                     )
-                # for file in pack:
-                #     shutil.copyfile(
-                #         os.path.join(self.data_dest, file),
-                #         os.path.join(segmentation_results_dir, file)
-                #     )
                 
             # removing temp file
             for file in os.listdir(temp_seg_src):
@@ -522,12 +438,6 @@ class TilesLoader():
         with open(os.path.join(self.results_dest, 'problematic_tiles.txt'), 'w') as outfile:
             for item in self.problematic_tiles:
                 outfile.write(f"{item}\n")
-
-        # printing stuff for test
-        print("State of the tree_list: ", self.trimming_tree_list)
-        print("Files in the list: ", len(self.list_tiles))
-        print("Failed tiles: ", len(self.problematic_tiles))
-        print("Files in folder: ", len([x for x in os.listdir(os.path.join(segmentation_results_dir))]))
 
         if self.trimming_method == "tree":
             self.trimming(verbose=verbose)
@@ -563,11 +473,6 @@ class TilesLoader():
         }
         list_files = [x for x in os.listdir(self.segmentation_results_dir) if x.endswith('.laz')]
         for _, file in tqdm(enumerate(list_files), total=len(list_files), desc="Classifying"):
-            # load tile
-
-            # create corresponding folder
-
-            #
             tile_full_path = os.path.join(self.segmentation_results_dir, file)
             split_instance(tile_full_path, path_out=self.classification_results_dir, verbose=verbose)
 
@@ -614,86 +519,6 @@ class TilesLoader():
         )
 
     def evaluate(self, verbose=True):
-
-        # # load csv of clusters
-        # df_clusters = pd.read_csv(self.tilesloader_conf.evaluate.cluster_csv_path, sep=';')
-        # number_of_clusters = sorted(df_clusters.cluster_id.unique().tolist())
-
-        # # remove tiles if necessary
-        # if len(list_of_tiles_to_remove) > 0:
-        #     df_clusters = df_clusters.loc[~df_clusters.tile_name.isin(list_of_tiles_to_remove)]
-        # lst_tiles = df_clusters.tile_name.values
-        # lst_tiles = []
-
-        # num_per_cluster = 5
-        # for cluster in number_of_clusters:
-        #     list_clusters = df_clusters.loc[df_clusters.cluster_id == cluster].sample(n=num_per_cluster, random_state=42).tile_name.values
-
-        #     if len(list_clusters) != num_per_cluster:
-        #         raise ValueError(f"Not enough samples left in cluster {cluster}!")
-        #     lst_tiles.append(list_clusters)
-        #     # print(df_clusters.loc[df_clusters.cluster_id == cluster].sample(n=num_per_cluster))
-        # lst_tiles_flatten = [x for row in lst_tiles for x in row]
-
-        # # loop on loops:
-        # loops = []
-        # x = 0
-        # while True:
-        #     if str(x) in os.listdir(self.tilesloader_conf.evaluate.run_src):
-        #         loops.append(x)
-        #         x += 1
-        #     else:
-        #         break
-        # if len(loops) == 0:
-        #     print("No loops in run folder..")
-        #     quit()
-
-        # # process evolution per cluster
-        # results_tot = {y: {x:{'garbage': [], 'multi': [], 'single': []} for x in loops} for y in range(len(lst_tiles))}
-
-        # for id_group, group in enumerate(["Crouded flat", "Crouded steep", "Empty steep", "Empty flat"]):
-        #     print("Group : ", id_group)
-        #     for loop in loops:
-        #         src_evaluation = os.path.join(self.root_src, self.tilesloader_conf.evaluate.run_src, str(loop), 'evaluation')
-        #         list_folders = [x for x in os.listdir(src_evaluation) if os.path.isdir(os.path.join(src_evaluation, x)) and x.split('_out_split_instance')[0]+'.laz' in lst_tiles[id_group]]
-        #         print(f"List folders in {src_evaluation}: {list_folders}")
-        #         # load results per 
-        #         for folder in list_folders:
-        #             results_loop = pd.read_csv(os.path.join(src_evaluation, folder, "results/results.csv"), sep=';')
-        #             print(results_loop.head())
-
-        #             for cat_num, cat_name in enumerate(['garbage', 'multi', 'single']):
-        #                 results_tot[id_group][loop][cat_name].append(len(results_loop.loc[results_loop['class'] == cat_num]))
-        
-        # results_agg = {
-        #     x: {
-        #         'garbage': [np.nanmean(results_tot[x][loop]["garbage"]) for loop in loops],
-        #         'multi': [np.nanmean(results_tot[x][loop]["multi"]) for loop in loops],
-        #         'single': [np.nanmean(results_tot[x][loop]["single"]) for loop in loops],
-        #         } for x in range(len(lst_tiles))}
-
-        # fig, axs = plt.subplots(2,2,figsize=(12,12))
-        # axs = axs.flatten()
-        # lst_titles = ['Crouded Flat', 'Crouded steep', 'Empty steep', 'Empty flat']
-        # for id_ax, ax in enumerate(axs):
-        #     df_results_agg = pd.DataFrame(results_agg[id_ax], index=range(len(loops)))
-        #     ax.plot(df_results_agg)
-        #     # ax.legend()
-        #     ax.set_title(lst_titles[id_ax])
-
-        # plt.savefig(os.path.join(self.root_src, self.tilesloader_conf.evaluate.run_src, 'test.png'))
-
-
-
-
-
-        # quit()
-
-
-
-        # # prepare architecture
-        # os.makedirs(os.path.join(run_src, ""), exist_ok=True)
-
         # load csv of clusters
         df_clusters = pd.read_csv(self.tilesloader_conf.evaluate.cluster_csv_path, sep=';')
         number_of_clusters = sorted(df_clusters.cluster_id.unique().tolist())
@@ -852,65 +677,13 @@ class TilesLoader():
         plt.savefig(os.path.join(self.root_src, self.tilesloader_conf.evaluate.run_src, 'test.png'))
 
 
-        # # process evolution per cluster
-        # results_tot = {x:{'garbage': [], 'multi': [], 'single': []} for x in loops}
-        # for loop in loops:
-        #     src_evaluation = os.path.join(self.root_src, self.tilesloader_conf.evaluate.run_src, str(loop), 'evaluation')
-        #     # loop on instances:
-        #     list_folders = [x for x in os.list_dir(src_evaluation) if os.path.isdir(x)]
-        #     # load results per 
-        #     for folder in list_folders:
-        #         results_loop = pd.read_csv(os.path.join(src_evaluation, folder, "results.csv"))
-        #         print(results_loop.groupby('class').count())
-        #         distrib = results_loop.groupby('class').count().values
-        #         results_tot[loop]['garbage'].append(distrib[0])
-        #         results_tot[loop]['multi'].append(distrib[1])
-        #         results_tot[loop]['single'].append(distrib[2])
-        
-        # results_agg = {loop: [
-        #     np.mean(results_tot[loop]["garbage"]), 
-        #     np.mean(results_tot[loop]["multi"]), 
-        #     np.mean(results_tot[loop]["single"])
-        #     ] for loop in loops}
-        # df_results_agg = pd.DataFrame(results_agg, columns=['garbage', 'multi', 'single'])
-        # # plot evolution per cluster
-        # fig = plt.figure()
-        # sns.lineplot(df_results_agg)
-        # plt.show()
-
-            
-
-
 if __name__ == "__main__":
-    # test = {
-    #     0: [0.3, 0.4, 0.5],
-    #     1: [0.3, 0.4, 0.5],
-    #     2: [0.3, 0.4, 0.5],
-    # }
-    # df_test = pd.DataFrame(test)
-    # fig = plt.figure()
-    # plt.plot(df_test)
-    # # sns.lineplot(df_test)
-    # # plt.show()
-    # quit()
-
-
-
-
-
     time_start = time.time()
     cfg_tilesloader = OmegaConf.load("config/tiles_loader.yaml")
     cfg_segmenter = OmegaConf.load("config/segmenter.yaml")
     cfg_classifier = OmegaConf.load("config/classifier.yaml")
     cfg = OmegaConf.merge(cfg_tilesloader, cfg_segmenter, cfg_classifier)
     tiles_loader = TilesLoader(cfg)
-
-    # list_to_drop = ["color_grp_full_tile_568.laz", "color_grp_full_tile_504.laz"]
-    # list_to_drop = [x for x in os.listdir(os.path.join(cfg_tilesloader.tiles_loader.root_src, cfg_tilesloader.tiles_loader.evaluate.run_src, "pseudo_labels")) if x.endswith('.laz')]
-
-    # tiles_loader.evaluate(list_to_drop, verbose=True)
-    # tiles_loader.preprocess(verbose=False)
-    # quit()
 
     if len(sys.argv) > 1:
 
@@ -920,10 +693,6 @@ if __name__ == "__main__":
         verbose = True if sys.argv[2].lower() == 'true' else False
         assert mode in ["tilling", "trimming", "classification"]
         assert verbose in [True, False]
-        
-        # call function
-        #print("Mode: ", mode, "\nverbose: ", verbose)
-        #quit()
 
         if mode == 'preprocess':
             tiles_loader.preprocess(verbose='verbose')
@@ -937,10 +706,6 @@ if __name__ == "__main__":
             tiles_loader.evaluate(verbose=verbose)
         else:
             pass
-        quit()
-    #tiles_loader.tiling()
-    #tiles_loader.trimming(verbose=False)
-    # tiles_loader.classify(verbose=True)
     
     delta_time = time.time() - time_start
     print(f"Process done in {delta_time} seconds")

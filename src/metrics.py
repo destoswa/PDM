@@ -6,7 +6,6 @@ import pandas as pd
 def compute_classification_results(src_results):
     df_results = pd.read_csv(os.path.join(src_results, 'results.csv'), sep=';')
     vals = range(3)
-    # return [x[0] for x in df_results.groupby('class').count().values]
     return [len(df_results[df_results['class'] == val]) for val in vals]
 
 
@@ -21,7 +20,6 @@ def compute_panoptic_quality(gt_instances, pred_instances):
     # convert inputs
     gt_instances, pred_instances = format_segmentation_for_PQ(gt_instances, pred_instances)
 
-    # gt_instances, pred_instances = get_segmentation(gt_instances, pred_instances)
     tp, fp, fn = 0, 0, 0
     iou_sum = 0
 
@@ -112,11 +110,6 @@ def format_segmentation_for_PQ(instance_gt, instance_pred):
         if instance == 0: continue
         list_points = [pos for pos, val in enumerate(instance_pred) if val == instance]
         preds_format.append(set(list_points))
-
-    # Computing semantic
-    # for semantic in set(semantic_list):
-    #     list_points = [pos for pos, val in enumerate(semantic_list) if val == semantic]
-    #     semantic_format.append(set(list_points))
 
     return gt_format, preds_format
 

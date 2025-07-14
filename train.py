@@ -4,14 +4,7 @@ import numpy as np
 import pandas as pd
 from omegaconf import OmegaConf
 import random
-import laspy
-from tqdm import tqdm
-from scipy.spatial import cKDTree
 from time import time
-# import warnings
-# warnings.filterwarnings("ignore")
-
-# from src.format_conversions import convert_all_in_folder
 from src.pipeline import Pipeline
 from src.preprocessing import flattening
 
@@ -26,7 +19,6 @@ def main(cfg):
     # load data
     NUM_LOOPS = cfg.pipeline.num_loops
     DATA_SRC = os.path.join(cfg.dataset.project_root_src, cfg.dataset.data_src)
-    FILE_FORMAT = cfg.dataset.file_format
 
     TRAIN_FRAC = cfg.pipeline.train_frac
     TEST_FRAC = cfg.pipeline.test_frac
@@ -169,45 +161,11 @@ def main(cfg):
 
     
 if __name__ == "__main__":
-
-    # dir_target = "../data/dataset_pipeline/tiles_20/loops/1/preds/color_grp_full_tile_124_out_split_instance"
-    # from src.format_conversions import convert_all_in_folder
-    # for file in [x for x in os.listdir('data/dataset_pipeline/tiles_20/loops/1/preds') if x.endswith(".laz")]:
-    #     print(file)
-    #     test = laspy.read(os.path.join('data/dataset_pipeline/tiles_20/loops/1/preds', file))
-    # convert_all_in_folder(
-    #                 src_folder_in=dir_target, 
-    #                 src_folder_out=os.path.normpath(dir_target) + "/data", 
-    #                 in_type='laz', 
-    #                 out_type='pcd',
-    #                 verbose=True
-    #                 )
-    # exit()
-
     cfg_dataset = OmegaConf.load('./config/dataset.yaml')
     cfg_preprocess = OmegaConf.load('./config/preprocessing.yaml')
     cfg_pipeline = OmegaConf.load('./config/pipeline.yaml')
     cfg_classifier = OmegaConf.load('./config/classifier.yaml')
     cfg_segmenter = OmegaConf.load('./config/segmenter.yaml')
     cfg = OmegaConf.merge(cfg_dataset, cfg_preprocess, cfg_pipeline, cfg_classifier, cfg_segmenter)
-
-
-    # pipeline = Pipeline(cfg)
-    # pipeline.result_dir = "/home/pdm/results/trainings_saved/20250517_145404_first_long_run"
-    # pipeline.current_loop = 29
-    # pipeline.result_current_loop_dir = os.path.join(pipeline.result_dir, str(pipeline.current_loop))
-    # pipeline.result_pseudo_labels_dir = os.path.join(pipeline.result_dir, 'pseudo_labels/')
-    
-    # pipeline.training_metrics_src = os.path.join(pipeline.result_dir, 'training_metrics.csv')
-    # pipeline.inference_metrics_src = os.path.join(pipeline.result_dir, 'inference_metrics.csv')
-    # inf_metric = pd.read_csv(pipeline.inference_metrics_src, sep=';')
-    # print(inf_metric.head())
-
-    # pipeline.visualization()
-    # # pipeline.test()
-    
-    # quit()
-
-
 
     main(cfg)

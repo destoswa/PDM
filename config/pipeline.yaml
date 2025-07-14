@@ -1,8 +1,8 @@
 pipeline:
   root_src: /home/pdm
-  results_root_src: results/trainings
-  result_src_name_suffixe: flatten_with_split_correction_long
-  num_loops: 15
+  results_root_src: results/for_paper/others
+  result_src_name_suffixe: gs_1_200
+  num_loops: 10
   train_frac: 0.7
   val_frac: 0.15
   test_frac: 0.15
@@ -11,17 +11,17 @@ pipeline:
     garbage_as_grey: True
     save_pseudo_labels_per_loop: True
     # do_remove_hanging_points: True
-    do_flatten: True
+    do_flatten: False
     flatten_tile_size: 10
     src_floors: /home/pdm/data/dataset_pipeline/tiles_20/floors
   preload:
-    do_continue_from_existing: False
-    src_existing: /home/pdm/results/trainings/20250619_115127_flatten_with_split_correction
+    do_continue_from_existing: True
+    src_existing: /home/pdm/results/for_paper/others/20250627_205749_gs_3_500
   debugging:
     keep_previous_data: False
   eval_on_gt:
-    src_existing: results/trainings_saved/20250621_221244_flatten_with_split_correction_long
-    src_data_gt: data/gt
+    src_existing: results/for_paper/final/final_training
+    src_data_gt: data/gt/gt
     results_root_src: results/eval
-    result_src_name_suffixe: flatten_with_split_correction_long
+    result_src_name_suffixe: final_on_gt
 

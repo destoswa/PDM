@@ -13,45 +13,6 @@ from tqdm import tqdm
 from scipy.spatial import cKDTree
 
 
-# def remove_duplicates(laz_file):
-#     # Find pairs of points
-#     coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)),2).T
-#     tree_B = cKDTree(coords)
-#     pairs = tree_B.query_pairs(1e-2)
-
-#     # Create the mask with dupplicates
-#     mask = [True for i in range(len(coords))]
-#     for pair in pairs:
-#         mask[pair[1]] = False
-
-#     # Remove the dupplicates from the file
-#     laz_file.points = laz_file.points[mask]
-
-# def remove_duplicates(laz_file):
-#     # Round coordinates to 2 decimals and stack into Nx3 array
-#     coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)).T, 2)
-
-#     # Build KDTree and find pairs of close points (within 1 cm)
-#     tree = cKDTree(coords)
-#     pairs = tree.query_pairs(1e-2)  # 1 cm tolerance
-
-#     # Create boolean mask: keep first occurrence, drop the second
-#     mask = np.ones(len(coords), dtype=bool)
-#     for i, j in pairs:
-#         mask[j] = False
-
-#     # Create new LAS object
-#     header = laspy.LasHeader(point_format=laz_file.header.point_format, version=laz_file.header.version)
-#     header.point_count = 0
-#     new_las = laspy.LasData(header)
-
-#     # Copy all dimensions with the mask applied
-#     for dim in laz_file.point_format.dimension_names:
-#         setattr(new_las, dim, getattr(laz_file, dim)[mask])
-
-#     return new_las
-
-
 def remove_duplicates(laz_file, decimals=2):
     coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)).T, decimals)
     _, unique_indices = np.unique(coords, axis=0, return_index=True)
@@ -134,7 +95,6 @@ def flattening_tile(tile_src, tile_new_original_src, grid_size=10, verbose=True)
     #   _Assign filtered and modified data
     for dim, values in filtered_points.items():
         setattr(new_las, dim, values)
-    # new_las.xyz = points_interpolated
     setattr(new_las, 'x', points_interpolated[:,0])
     setattr(new_las, 'y', points_interpolated[:,1])
     setattr(new_las, 'z', points_interpolated[:,2])

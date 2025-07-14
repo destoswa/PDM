@@ -10,8 +10,6 @@ try:
         import pdal
 except:
     pass
-import concurrent.futures
-from functools import partial
 
 
 class Convertions:
@@ -93,17 +91,6 @@ class Convertions:
             print(f"PCD file saved in {out_pcd}")
 
 
-# Parallelized conversion function (not used at the moment.. not working well with I/O operations)
-def process_file(file, src_folder_in, src_folder_out, in_type, out_type):
-    if file.endswith(in_type):
-        file_out = os.path.splitext(file)[0] + '.' + out_type
-        getattr(Convertions, f"convert_{in_type}_to_{out_type}")(
-            os.path.join(src_folder_in, file), 
-            os.path.join(src_folder_out, file_out), 
-            verbose=False
-        )
-
-
 def convert_all_in_folder(src_folder_in, src_folder_out, in_type, out_type, verbose=False):
     assert in_type in ['las', 'laz', 'pcd']
     assert out_type in ['las', 'laz', 'pcd']
@@ -113,13 +100,7 @@ def convert_all_in_folder(src_folder_in, src_folder_out, in_type, out_type, verb
         print(f"No function for converting {in_type} into {out_type}!!")
         return
     os.makedirs(src_folder_out, exist_ok=True)  # Ensure output folder exists
-    # if not os.path.exists(src_folder_out):
-    #     os.mkdir(src_folder_out)
     files = [f for f in os.listdir(src_folder_in) if f.endswith(in_type)]
-
-    # with concurrent.futures.ThreadPoolExecutor() as executor:
-    #     list(tqdm(executor.map(lambda f: process_file(f, src_folder_in, src_folder_out, in_type, out_type), files), total=len(files)))
-
     for _, file in tqdm(enumerate(files), total=len(files), desc=f"Converting {in_type} in {out_type}", disable=~verbose):
         try:
             file_out = file.split(in_type)[0] + out_type
@@ -141,28 +122,6 @@ if __name__ == "__main__":
                 verbose = True
         
         convert_all_in_folder(src_folder_in, src_folder_out, in_type, out_type, verbose)
-
-
-        # # tests and variable declaration
-        # assert len(sys.argv) == 3
-        # mode = sys.argv[1]
-        # verbose = True if sys.argv[2].lower() == 'true' else False
-        # assert mode in ["tiling", "trimming", "classification"]
-        # assert verbose in [True, False]
-        
-        # # call function
-        # #print("Mode: ", mode, "\nverbose: ", verbose)
-        # #quit()
-
-        # if mode == "tiling":
-        #     tiles_loader.tiling(verbose=verbose)
-        # elif mode == "trimming":
-        #     tiles_loader.trimming(verbose=verbose)
-        # elif mode == "classification":
-        #     tiles_loader.classify(verbose=verbose)
-        # else:
-        #     pass
-        # quit()
     else:
         print("Missing arguments!")
         quit()

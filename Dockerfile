@@ -70,8 +70,6 @@ ENV CONDA_PREFIX=/opt/conda/envs/pdm_env
 ENV PATH="${CONDA_PREFIX}/bin:${PATH}"
 
 # Install dependencies inside the Conda environment (pdm_env)
-# RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade pip \
-#     && conda run -n pdal_env python -m pip install autopep8 doc8 ipython pandas tqdm
 RUN conda run -n pdm_env python -m pip install --no-cache-dir --upgrade \
     autopep8==1.5.7 \
     doc8==0.8.1 \
@@ -88,27 +86,11 @@ RUN conda run -n pdm_env python -m pip install --no-cache-dir --upgrade \
     tqdm==4.62.3 \
     wheel==0.37.0
 
-# Install dependencies inside the Conda environment (pdal_env)
-# RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade pip \
-#     && conda run -n pdal_env python -m pip install autopep8 doc8 ipython pandas tqdm
-# RUN conda run -n pdal_env python -m pip install --no-cache-dir --upgrade \
-#     pandas==2.2.3 \
-#     tqdm==4.67.1 \
-#     matplotlib==3.4.3 \
-#     seaborn==0.11.2 \
-#     omegaconf==2.0.6 \
-#     laspy[laszip] \
-#     numpy==1.24.4
-
 # Set up GPU-related environment variables
 ENV CU_VERSION=cu111
 ENV TORCH_CUDA_ARCH_LIST_VER="6.0;7.0;7.5;8.0;8.6"
 
 # Install PyTorch and dependencies
-# RUN conda run -n pdal_env python -m pip install \
-#     torch==1.9.0+${CU_VERSION} torchvision==0.10.0+${CU_VERSION} torchaudio==0.9.0 \
-#     -f https://download.pytorch.org/whl/torch_stable.html
-
 RUN conda run -n pdm_env python -m pip install --no-cache-dir \
     torch==1.9.0+${CU_VERSION} \
     torchvision==0.10.0+${CU_VERSION} \
