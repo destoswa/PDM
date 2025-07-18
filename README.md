@@ -41,8 +41,21 @@ bash run_TilesLoader.sh <mode> <verbose>
     - "full": do tilling, trimming, preprocessing and classification.
 
 #### training of the pipeline
+In order to train the pipeline, simply run the `./train.py` script.
 
+You will find the different configuration parameters in the folder `./config`:
+- _**classifier.yaml**_: If using the default classifier model, no need to change anything.
+- _**segmenter.yaml**_: You can set here the training batch, the number of epochs per loop and number of samples per epoch. The other parameters should not be changed if using standard setup
+- _**dataset.yaml**_: Set here the dataset to be used. It should be the relative path from  the root of the project to the folder containing all the tiles. Eventhough, the file_format can be precised, I don't recommend using something else than _.laz_ files.
+- _**pipeline.yaml**_: In this file, are stored the config for the number of loops per tiles, the fraction of the different sets, the different processes, the location of the project if continuing from an existing one and the inference configuration.
+
+The segmenter is not very stable so it can crash. If this happens, simply remove in the results folder, the loop(s) that was/were incomplete, set the parameter `pipeline.preload.do_continuer_from_existing` to True, while precising the path to the result folder and run again the script `train.py`
 
 #### inference with the pipeline
+Similarly to the training, to do inference with a trained pipeline, run the `./inference.py` script.
 
-  
+The cooresponding configuration parameters to drive the inference are located in the file `./config/pipeline.yaml` in the `inference` section. 
+
+The two flags `is_gt` and `with_groups` are to be set if the inference is done on tiles that have ground truth and if they correspond to a grouping with a corresponding csv file assigning each tile to a group (called cluster).
+
+The grouping is done in the jupyter notebook `./notebooks/cluster_tiles.ipynb` and the ground truth is done in the notebook `notebooks/ground_truth_generation.ipynb` with the assistance of the software _CloudCompare_ and the tool _PointCLoudCleaner_
