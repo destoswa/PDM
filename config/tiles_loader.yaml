@@ -18,5 +18,4 @@ tiles_loader:
     run_src: results/trainings_saved/20250601_142133_with_instance_splitting
     cluster_src: data/full_dataset/all_tiles/dataset_full_100m
     cluster_csv_path: data/full_dataset/selection/clustered.csv
-    tiles_to_remove: []
-    
+    num_per_group: 5

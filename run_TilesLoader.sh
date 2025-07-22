@@ -39,8 +39,8 @@ activate_and_run(){
 # call the different functions depending on the mode
 if [ "$MODE" == "full" ]; then
     activate_and_run "pdal_env" "tilling" "$VERBOSE"
-    activate_and_run "pdm_env" "preprocess" "$VERBOSE"
     activate_and_run "pdm_env" "trimming" "$VERBOSE"
+    activate_and_run "pdm_env" "preprocess" "$VERBOSE"
     activate_and_run "pdal_env" "classification" "$VERBOSE"
 elif [ "$MODE" == "trim_and_class" ]; then
     activate_and_run "pdm_env" "trimming" "$VERBOSE"
@@ -56,6 +56,8 @@ elif [ "$MODE" == "classification" ]; then
     activate_and_run "pdal_env" "classification" "$VERBOSE"
 elif [ "$MODE" == "preprocess" ]; then
     activate_and_run "pdm_env" "preprocess" "$VERBOSE"
+# elif [ "$MODE" == "evaluate" ]; then
+#     activate_and_run "pdm_env" "evaluate" "$VERBOSE"
 else
     echo "WRONG ARGUMENT!"
     exit 1

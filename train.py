@@ -10,6 +10,16 @@ from src.preprocessing import flattening
 
 
 def main(cfg):
+    """
+    Run the full processing pipeline for data preparation, segmentation, classification, and training.
+
+    Args:
+        - cfg (omegaconf.DictConfig): all necessary parameters for pipeline configuration, and processing options.
+
+    Returns:
+        - None: The function executes the pipeline with logging and file outputs but returns no values.
+    """
+    
     # fixing seed
     random.seed(42)
 

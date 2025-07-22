@@ -1,11 +1,9 @@
 segmenter:
   root_model_src: /home/pdm/models/SegmentAnyTree
   inference:
-    # model_checkpoint_src: None
     config_eval_src: /home/pdm/models/SegmentAnyTree/conf/eval.yaml
     num_tiles_per_inference: 1
   training:
-    data_train: data/FORinstance_dataset
     config_data_src: /home/pdm/models/SegmentAnyTree/conf/data/panoptic/treeins_rad8.yaml
     config_results_src: /home/pdm/models/SegmentAnyTree/conf/hydra/output/custom.yaml
     batch_size: 16

@@ -14,6 +14,17 @@ from scipy.spatial import cKDTree
 
 
 def remove_duplicates(laz_file, decimals=2):
+    """
+    Removes duplicate points from a LAS/LAZ file based on rounded 3D coordinates.
+
+    Args:
+        - laz_file (laspy.LasData): Input LAS/LAZ file as a laspy object.
+        - decimals (int, optional): Number of decimals to round the coordinates for duplicate detection. Defaults to 2.
+
+    Returns:
+        - laspy.LasData: A new laspy object with duplicate points removed.
+    """
+        
     coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)).T, decimals)
     _, unique_indices = np.unique(coords, axis=0, return_index=True)
     mask = np.zeros(len(coords), dtype=bool)
@@ -30,7 +41,20 @@ def remove_duplicates(laz_file, decimals=2):
 
 
 def flattening_tile(tile_src, tile_new_original_src, grid_size=10, verbose=True):
-    # load file
+    """
+    Flattens a tile by interpolating the ground surface and subtracting it from the original elevation.
+
+    Args:
+        - tile_src (str): Path to the input tile in LAS/LAZ format.
+        - tile_new_original_src (str): Path to save the resized original tile after filtering.
+        - grid_size (int, optional): Size of the grid in meters for local interpolation. Defaults to 10.
+        - verbose (bool, optional): Whether to display progress and debug information. Defaults to True.
+
+    Returns:
+        - None: Saves the floor and flattened versions of the tile and updates the original file.
+    """
+
+    # Load file
     laz = laspy.read(tile_src)
     init_len = len(laz)
     laz = remove_duplicates(laz)
@@ -139,6 +163,20 @@ def flattening_tile(tile_src, tile_new_original_src, grid_size=10, verbose=True)
 
 
 def flattening(src_tiles, src_new_tiles, grid_size=10, verbose=True, verbose_full=False):
+    """
+    Applies the flattening process to all tiles in a directory using grid-based ground surface estimation.
+
+    Args:
+        - src_tiles (str): Path to the directory containing original tiles.
+        - src_new_tiles (str): Path to the directory where resized tiles will be saved.
+        - grid_size (int, optional): Size of the grid in meters for interpolation. Defaults to 10.
+        - verbose (bool, optional): Whether to show a general progress bar. Defaults to True.
+        - verbose_full (bool, optional): Whether to print detailed info per tile. Defaults to False.
+
+    Returns:
+        - None: Processes and saves flattened tiles into their respective folders.
+    """
+    
     print("Starting flattening:")
     list_tiles = [x for x in os.listdir(src_tiles) if x.endswith('.laz')]
     for _, tile in tqdm(enumerate(list_tiles), total=len(list_tiles), desc="Processing", disable=verbose==False):

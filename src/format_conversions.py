@@ -15,6 +15,18 @@ except:
 class Convertions:
     @staticmethod
     def convert_laz_to_las(in_laz, out_las, verbose=True):
+        """
+        Converts a LAZ file to an uncompressed LAS file.
+
+        Args:
+            - in_laz (str): Path to the input .laz file.
+            - out_las (str): Path to the output .las file.
+            - verbose (bool, optional): Whether to print confirmation of the saved file. Defaults to True.
+
+        Returns:
+            - None: Saves the converted .las file.
+        """
+
         las = laspy.read(in_laz)
         las = laspy.convert(las)
         las.write(out_las)
@@ -23,6 +35,18 @@ class Convertions:
 
     @staticmethod
     def convert_pcd_to_laz(in_pcd, out_laz, verbose=True):
+        """
+        Converts a PCD file to a compressed LAZ file using PDAL.
+
+        Args:
+            - in_pcd (str): Path to the input .pcd file.
+            - out_laz (str): Path to the output .laz file.
+            - verbose (bool, optional): Whether to print confirmation of the saved file. Defaults to True.
+
+        Returns:
+            - None: Saves the converted .laz file after reprojecting to EPSG:2056.
+        """
+
         # pcd = laspy.read('../data/testing_samples/split_0332.pcd')
         pipeline_json = {
             "pipeline": [
@@ -50,6 +74,18 @@ class Convertions:
 
     @staticmethod
     def convert_laz_to_pcd(in_laz, out_pcd, verbose=True):
+        """
+        Converts a LAZ file to a PCD file, preserving all point attributes.
+
+        Args:
+            - in_laz (str): Path to the input .laz file.
+            - out_pcd (str): Path to the output .pcd file.
+            - verbose (bool, optional): Whether to print confirmation of the saved file. Defaults to True.
+
+        Returns:
+            - None: Saves the converted .pcd file in ASCII format.
+        """
+
         laz = laspy.read(in_laz)
 
         # Gathering all attributes from laz file
@@ -92,6 +128,20 @@ class Convertions:
 
 
 def convert_all_in_folder(src_folder_in, src_folder_out, in_type, out_type, verbose=False):
+    """
+    Converts all files in a folder from one point cloud format to another.
+
+    Args:
+        - src_folder_in (str): Path to the input folder containing files to convert.
+        - src_folder_out (str): Path to the output folder where converted files will be saved.
+        - in_type (str): Input file type ('las', 'laz', or 'pcd').
+        - out_type (str): Output file type ('las', 'laz', or 'pcd').
+        - verbose (bool, optional): Whether to display a progress bar and detailed messages. Defaults to False.
+
+    Returns:
+        - None: Saves all converted files into the specified output folder.
+    """
+    
     assert in_type in ['las', 'laz', 'pcd']
     assert out_type in ['las', 'laz', 'pcd']
     assert in_type != out_type

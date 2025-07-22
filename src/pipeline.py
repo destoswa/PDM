@@ -16,7 +16,7 @@ if __name__ == "__main__":
     sys.path.append(os.getcwd())
 from src.format_conversions import convert_all_in_folder
 from src.metrics import compute_classification_results, compute_panoptic_quality
-from src.visualization import show_global_metrics, show_inference_counts, show_inference_metrics, show_pseudo_labels_evolution, show_pseudo_labels_vs_gt, show_training_losses, show_stages_losses
+from src.visualization import show_global_metrics, show_inference_counts, show_inference_metrics, show_pseudo_labels_evolution, show_pseudo_labels_vs_gt, show_training_losses, show_stages_losses, show_test_set
 from src.splitting import split_instance
 from src.fast_inference import fast_inference
 
@@ -137,12 +137,17 @@ class Pipeline():
             self.training_metrics.to_csv(self.training_metrics_src, sep=';', index=False)
             self.inference_metrics.to_csv(self.inference_metrics_src, sep=';', index=False)
         else:
+            # test if the training file already exists
             if os.path.exists(self.training_metrics_src):
                 self.training_metrics = pd.read_csv(self.training_metrics_src, sep=';')
+                self.training_metrics = self.training_metrics[self.training_metrics.num_loop < self.current_loop]
             else:
                 self.training_metrics.to_csv(self.training_metrics_src, sep=';', index=False)
+
+            # test if the inference file already exists
             if os.path.exists(self.inference_metrics_src):
                 self.inference_metrics = pd.read_csv(self.inference_metrics_src, sep=';')
+                self.inference_metrics = self.inference_metrics[self.inference_metrics.num_loop < self.current_loop]
             else:
                 self.inference_metrics.to_csv(self.inference_metrics_src, sep=';', index=False)
 
@@ -151,10 +156,16 @@ class Pipeline():
 
     @staticmethod
     def unzip_laz_files(zip_path, extract_to=".", delete_zip=True):
-        """Extract all .laz files from a zip archive to a target directory root.
+        """
+        Extract all .laz files from a zip archive to a specified directory.
 
-        zip_path (str): Path to the .zip archive.
-        extract_to (str): Directory where .laz files will be extracted. Defaults to current directory.
+        Args:
+            - zip_path (str): Path to the .zip archive containing .laz files.
+            - extract_to (str, optional): Directory to extract the files to. Defaults to current directory.
+            - delete_zip (bool, optional): Whether to delete the zip file after extraction. Defaults to True.
+
+        Returns:
+            - None: Extracts files and optionally deletes the zip archive.
         """
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             laz_files = [f for f in zip_ref.namelist() if f.lower().endswith('.laz') and not f.endswith('/')]
@@ -168,6 +179,18 @@ class Pipeline():
 
     @staticmethod
     def change_var_val_yaml(src_yaml, var, val):
+        """
+        Modify a variable value in a YAML file.
+
+        Args:
+            - src_yaml (str): Path to the YAML file.
+            - var (str): Path to the variable in the YAML file, using '/' as separator.
+            - val (Any): New value to assign to the specified variable.
+
+        Returns:
+            - None: The function modifies the YAML file in place without returning anything.
+        """
+
         # load yaml file
         yaml_raw = OmegaConf.load(src_yaml)
         yaml = OmegaConf.create(yaml_raw)  # now data.first_subsampling works
@@ -186,6 +209,17 @@ class Pipeline():
 
     @staticmethod
     def remove_duplicates(laz_file, decimals=2):
+        """
+        Remove duplicate points from a LAS/LAZ file based on rounded coordinate precision.
+
+        Args:
+            - laz_file (laspy.LasData): Input LAS/LAZ file as a laspy object.
+            - decimals (int, optional): Number of decimal places to round coordinates for duplicate detection. Defaults to 2.
+
+        Returns:
+            - laspy.LasData: A new LAS/LAZ file object with duplicates removed.
+        """
+
         coords = np.round(np.vstack((laz_file.x, laz_file.y, laz_file.z)).T, decimals)
         _, unique_indices = np.unique(coords, axis=0, return_index=True)
         mask = np.zeros(len(coords), dtype=bool)
@@ -245,6 +279,17 @@ class Pipeline():
 
     @staticmethod
     def transform_with_pca(pointcloud, verbose=False):
+        """
+        Transform a 2D or 3D point cloud using Principal Component Analysis (PCA) to align with principal axes.
+
+        Args:
+            - pointcloud (np.ndarray): Input point cloud as a numpy array of shape (N, 2) or (N, 3).
+            - verbose (bool, optional): Whether to print PCA components and transformed points. Defaults to False.
+
+        Returns:
+            - np.ndarray: PCA-transformed point cloud of shape (N, 2).
+        """
+
         # fit PCA
         pca = PCA(n_components=2)
 
@@ -261,6 +306,18 @@ class Pipeline():
     
     @staticmethod
     def split_instances(pointcloud, maskA, maskB):
+        """
+        Split overlapping instances within a point cloud using PCA to determine a separation line.
+
+        Args:
+            - pointcloud (laspy.LasData): Input LAS/LAZ point cloud.
+            - maskA (np.ndarray): Boolean mask for instance A.
+            - maskB (np.ndarray): Boolean mask for instance B.
+
+        Returns:
+            - tuple[np.ndarray, np.ndarray]: Updated boolean masks (maskA, maskB) after splitting the intersection region based on proximity to instance centroids.
+        """
+
         intersection_mask = maskA & maskB
         pc_x = np.reshape(np.array(getattr(pointcloud, 'x')), (-1,1))
         pc_y = np.reshape(np.array(getattr(pointcloud, 'y')), (-1,1))
@@ -312,6 +369,18 @@ class Pipeline():
         return maskA, maskB
 
     def run_subprocess(self, src_script, script_name, add_to_log=True, params=None, verbose=True):
+        """
+        Run a subprocess in a specific directory with optional parameters.
+
+        Args:
+            - src_script (str): Directory path where the subprocess will be executed.
+            - script_name (str): Name of the script to run (bash file).
+            - params (list, optional): List of parameters to pass to the script. Defaults to None.
+            - verbose (bool, optional): Whether to print real-time subprocess output. Defaults to True.
+
+        Returns:
+            - int: Exit code returned by the subprocess.
+        """
         # go at the root of the segmenter
         old_current_dir = os.getcwd()
         os.chdir(src_script)
@@ -357,6 +426,16 @@ class Pipeline():
         return process.returncode
 
     def preprocess(self, verbose=True):
+        """
+        Preprocess point cloud tiles by removing duplicate points before further processing.
+
+        Args:
+            - verbose (bool, optional): Whether to print the size of files before and after duplicate removal. Defaults to True.
+
+        Returns:
+            - None: Overwrites the original tiles with duplicate-free versions.
+        """
+
         # remove duplicates
         for tile in self.tiles_to_process:
             tile_path = os.path.join(self.result_pseudo_labels_dir, tile)
@@ -371,6 +450,16 @@ class Pipeline():
                 print("size after duplicate removal: ", len(tile))
 
     def segment(self, verbose=False):
+        """
+        Segment point cloud tiles by running an external segmentation pipeline, handling optional flattening and faulty tiles.
+
+        Args:
+            - verbose (bool, optional): Whether to print detailed progress information during segmentation. Defaults to False.
+
+        Returns:
+            - None: Runs segmentation, updates prediction files, and tracks problematic or empty tiles.
+        """
+
         print("Starting inference:")
         os.makedirs(self.preds_src, exist_ok=True)
 
@@ -519,6 +608,16 @@ class Pipeline():
         shutil.copytree(self.preds_src, os.path.join(self.result_current_loop_dir, os.path.basename(self.preds_src)))
     
     def classify(self, verbose=False):
+        """
+        Classify segmented point cloud instances by splitting instances, converting formats, running inference, and post-processing.
+
+        Args:
+            - verbose (bool, optional): Whether to display progress and warnings during classification. Defaults to False.
+
+        Returns:
+            - None: Performs classification on predicted segments and stores results in the appropriate format.
+        """
+
         print("Starting classification:")
 
         # loop on files:
@@ -574,8 +673,17 @@ class Pipeline():
                 if file.endswith('.pcd'):
                     os.remove(os.path.join(output_folder, file))
 
-
     def create_pseudo_labels(self, verbose=False):
+        """
+        Create and update pseudo labels for segmented point cloud instances by matching clusters, checking overlaps, splitting instances, and applying classification rules.
+
+        Args:
+            - verbose (bool, optional): Whether to print detailed progress and logging information during processing. Defaults to False.
+
+        Returns:
+            - None: Updates the pseudo-labeled point clouds and writes the results to disk, including monitoring statistics and optional flattened versions.
+        """
+
         print("Creating pseudo labels:")
         self.log += "Creating pseudo labels:\n"
 
@@ -838,7 +946,6 @@ class Pipeline():
                 flatten_file.__setattr__('treeID', original_file.treeID)
                 flatten_file.write(flatten_pseudo_labels_src)
 
-
     def process_row(self, coords_original_file_view, row_id):
         # Find matching points between original file and cluster
         mask = np.isin(coords_original_file_view, self.classified_clusters[row_id][0])
@@ -846,6 +953,16 @@ class Pipeline():
         return mask, self.classified_clusters[row_id][1]
 
     def stats_on_tiles(self):
+        """
+        Compute classification results and panoptic quality metrics for each tile by processing segmentation outputs and comparing predicted and ground truth instances.
+
+        Args:
+            - None
+
+        Returns:
+            - None: Updates the inference metrics with classification results and panoptic quality metrics for each processed tile.
+        """
+
         print("Computing stats on tiles")
         for _, file in tqdm(enumerate(self.tiles_to_process), total=len(self.tiles_to_process), desc="processing"):
             # Add stats to state variable
@@ -884,6 +1001,16 @@ class Pipeline():
                 self.inference_metrics.loc[(self.inference_metrics.name == file) & (self.inference_metrics.num_loop == self.current_loop), metric_name] = metric_val
 
     def prepare_data(self, verbose=True):
+        """
+        Prepare the data for further processing by running a subprocess to convert sample data into the required format.
+
+        Args:
+            - verbose (bool, optional): Whether to display detailed progress and logging information. Defaults to True.
+
+        Returns:
+            - None: Executes a subprocess for data preparation.
+        """
+
         print("Prepare data:")
         self.run_subprocess(
             src_script="/home/pdm/models/SegmentAnyTree/",
@@ -894,6 +1021,16 @@ class Pipeline():
             )
 
     def train(self, verbose=True):
+        """
+        Train the model using the specified configuration and data, modifying configuration files and running the training subprocess.
+
+        Args:
+            - verbose (bool, optional): Whether to display detailed progress and logging information during training. Defaults to True.
+
+        Returns:
+            - None: Initiates model training and updates the model checkpoint path after completion.
+        """
+
         # test if enough tiles available
         for type in ['train', 'test', 'val']:
             if len([x for x in os.listdir(os.path.join(self.result_pseudo_labels_dir, 'treeinsfused/raw/', os.path.split(os.path.abspath(self.result_pseudo_labels_dir))[-1])) if x.split('.')[0].endswith(type)]) == 0:
@@ -937,7 +1074,18 @@ class Pipeline():
         if self.do_flatten:
             self.result_pseudo_labels_dir = self.original_result_pseudo_labels_dir
 
-    def visualization(self, with_training=True, with_gt=False):
+    def visualization(self, with_training=True, with_gt=False, with_groups=False):
+        """
+        Generate and save visualization plots for inference metrics, pseudo labels, and training results.
+
+        Args:
+            - with_training (bool, optional): Whether to include training-related visualizations. Defaults to True.
+            - with_gt (bool, optional): Whether to include ground truth comparison visualizations. Defaults to False.
+
+        Returns:
+            - None: Saves visualizations to the specified directory.
+        """
+
         print("Saving plots:")
         
         # creates location
@@ -989,8 +1137,28 @@ class Pipeline():
                 show_figure=False,
                 save_figure=True,
             )
+        if with_groups:
+            show_test_set(
+                data_folder=self.result_dir,
+                src_location=os.path.join(location_src, "peudo_labels_vs_gt.png"),
+                cluster_csv_file=self.cfg.inference.groups_csv_path,
+                show_figure=False,
+                save_figure=True,
+            )
 
     def save_log(self, dest, clear_after=True, verbose=False):
+        """
+        Save the logs to the specified destination and optionally clear the log after saving.
+
+        Args:
+            - dest (str): The destination directory where the log should be saved.
+            - clear_after (bool, optional): Whether to clear the log after saving. Defaults to True.
+            - verbose (bool, optional): Whether to print the log saving progress. Defaults to False.
+
+        Returns:
+            - None: Saves the log to the specified destination and optionally clears it.
+        """
+
         if verbose:
             print(f"Saving logs (of size {len(self.log)}) to : {dest}")
         

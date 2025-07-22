@@ -9,10 +9,25 @@ from tqdm import tqdm
 from scipy.ndimage import uniform_filter1d
 
 sys.path.append("D:/PDM_repo/Github/PDM")
-from src.metrics import compute_classification_results, compute_panoptic_quality, compute_mean_iou
+from src.metrics import compute_panoptic_quality
 
 
 def show_metric_over_epoch(df, metric_name, ax=None, save_figure=False, src_figure=None, show_figure=False):
+    """
+    Plots the evolution of a given metric over epochs, separated by training stage.
+
+    Args:
+        - df (pd.DataFrame): Dataframe containing the metrics and training progress information.
+        - metric_name (str): Name of the metric to plot.
+        - ax (plt.Axes, optional): Matplotlib axis to plot on, if provided.
+        - save_figure (bool, optional): If True, saves the figure to disk.
+        - src_figure (str, optional): Path to save the figure, if saving is enabled.
+        - show_figure (bool, optional): If True, displays the figure.
+
+    Returns:
+        - plt.Figure: The generated matplotlib figure.
+    """
+
     fig = None
     if ax == None:
         fig, ax = plt.figure()
@@ -33,6 +48,21 @@ def show_metric_over_epoch(df, metric_name, ax=None, save_figure=False, src_figu
 
 
 def show_metric_over_samples(df, metric_name, ax=None, save_figure=False, src_figure=None, show_figure=False):
+    """
+    Plots the evolution of a given metric over samples (index-based), useful for inspecting batch/sample-wise behavior.
+
+    Args:
+        - df (pd.DataFrame): Dataframe containing the metric values across samples.
+        - metric_name (str): Name of the metric to plot.
+        - ax (plt.Axes, optional): Matplotlib axis to plot on, if provided.
+        - save_figure (bool, optional): If True, saves the figure to disk.
+        - src_figure (str, optional): Path to save the figure, if saving is enabled.
+        - show_figure (bool, optional): If True, displays the figure.
+
+    Returns:
+        - plt.Figure: The generated matplotlib figure.
+    """
+
     fig = None
     if ax == None:
         fig, ax = plt.figure()
@@ -53,6 +83,20 @@ def show_metric_over_samples(df, metric_name, ax=None, save_figure=False, src_fi
 
 
 def show_global_metrics(data_src, exclude_columns = ['num_loop', 'num_epoch', 'stage', 'map'], src_location=None, show_figure=True, save_figure=False):
+    """
+    Plots all global metrics from a CSV file over training epochs in a grid layout.
+
+    Args:
+        - data_src (str or pd.DataFrame): Path to CSV file or preloaded DataFrame with metrics.
+        - exclude_columns (list, optional): List of columns to exclude from plotting.
+        - src_location (str, optional): Path to save the figure, if saving is enabled.
+        - show_figure (bool, optional): If True, displays the figure.
+        - save_figure (bool, optional): If True, saves the figure to disk.
+
+    Returns:
+        - plt.Figure: The generated matplotlib figure with global metrics.
+    """
+
     # load and prepare data
     df_data = pd.read_csv(data_src, sep=';')
 
@@ -82,6 +126,19 @@ def show_global_metrics(data_src, exclude_columns = ['num_loop', 'num_epoch', 's
 
 
 def show_training_losses(data_src, src_location=None, show_figure=True, save_figure=False):
+    """
+    Plots the overall training loss and its sub-losses over epochs.
+
+    Args:
+        - data_src (str or pd.DataFrame): Path to CSV file or preloaded DataFrame with loss values.
+        - src_location (str, optional): Path to save the figure, if saving is enabled.
+        - show_figure (bool, optional): If True, displays the figure.
+        - save_figure (bool, optional): If True, saves the figure to disk.
+
+    Returns:
+        - plt.Figure: The generated matplotlib figure showing loss evolution.
+    """
+    
     # load and prepare data
     df_data = pd.read_csv(data_src, sep=';')
     df_data = df_data.loc[df_data.stage == 'train']
@@ -106,6 +163,20 @@ def show_training_losses(data_src, src_location=None, show_figure=True, save_fig
 
 
 def show_stages_losses(data_src, exclude_columns = ['num_loop', 'num_epoch', 'stage', 'map'], src_location=None, show_figure=True, save_figure=False):
+    """
+    Plots the smoothed loss curves over epochs for different training stages (e.g., train, validation).
+
+    Args:
+        - data_src (str or pd.DataFrame): Path to CSV file or preloaded DataFrame with loss values.
+        - exclude_columns (list, optional): Columns to exclude from plotting.
+        - src_location (str, optional): Path to save the figure, if saving is enabled.
+        - show_figure (bool, optional): If True, displays the figure.
+        - save_figure (bool, optional): If True, saves the figure to disk.
+
+    Returns:
+        - plt.Figure: The generated matplotlib figure with stage-wise losses.
+    """
+    
     # load and prepare data
     df_data = pd.read_csv(data_src, sep=';')
     stages = list(df_data.stage.unique())
@@ -139,6 +210,19 @@ def show_stages_losses(data_src, exclude_columns = ['num_loop', 'num_epoch', 'st
 
 
 def show_inference_counts(data_src, src_location=None, show_figure=True, save_figure=False):
+    """
+    Plots counts and fractions of different prediction types (e.g., empty, problematic) over training loops.
+
+    Args:
+        - data_src (str or pd.DataFrame): Path to CSV file or preloaded DataFrame with inference counts.
+        - src_location (str, optional): Path to save the figure, if saving is enabled.
+        - show_figure (bool, optional): If True, displays the figure.
+        - save_figure (bool, optional): If True, saves the figure to disk.
+
+    Returns:
+        - plt.Figure: The generated matplotlib figure with inference counts.
+    """
+    
     df_data = pd.read_csv(data_src, sep=';')
     averages = df_data[["num_loop", "num_predictions", "num_garbage", "num_multi", "num_single"]].groupby('num_loop').mean()
     fractions = averages[["num_garbage", "num_multi", "num_single"]].div(averages["num_predictions"], axis=0)
@@ -166,6 +250,19 @@ def show_inference_counts(data_src, src_location=None, show_figure=True, save_fi
 
 
 def show_problematic_empty(data_src, src_location=None, show_figure=True, save_figure=False):
+    """
+    Plots the number of problematic and empty samples across training loops.
+
+    Args:
+        - data_src (str or pd.DataFrame): Path to CSV file or preloaded DataFrame with sample information.
+        - src_location (str, optional): Path to save the figure, if saving is enabled.
+        - show_figure (bool, optional): If True, displays the figure.
+        - save_figure (bool, optional): If True, saves the figure to disk.
+
+    Returns:
+        - plt.Figure: The generated matplotlib figure showing problematic/empty counts.
+    """
+    
     df_data = pd.read_csv(data_src, sep=';')
     num_problematic = df_data[['num_loop', 'is_problematic']].groupby('num_loop').sum()
     num_empty = df_data[['num_loop', 'is_empty']].groupby('num_loop').sum()
@@ -189,19 +286,33 @@ def show_problematic_empty(data_src, src_location=None, show_figure=True, save_f
 
 
 def show_inference_metrics(data_src, metrics = ['PQ', 'SQ', 'RQ', 'Pre', 'Rec'], src_location=None, show_figure=True, save_figure=False):
+    """
+    Plots inference metrics (e.g., PQ, SQ, RQ, Precision, Recall) averaged over samples across training loops.
+
+    Args:
+        - data_src (str or pd.DataFrame): Path to CSV file or preloaded DataFrame with inference metrics.
+        - metrics (list, optional): List of metrics to plot.
+        - src_location (str, optional): Path to save the figure, if saving is enabled.
+        - show_figure (bool, optional): If True, displays the figure.
+        - save_figure (bool, optional): If True, saves the figure to disk.
+
+    Returns:
+        - plt.Figure: The generated matplotlib figure showing inference metrics.
+    """
+
     abrev_to_name = {
         'PQ': "Panoptic Quality",
         'SQ': "Segmentation Quality",
         'RQ': "Recognition Quality",
         'Pre': "Precision",
         'Rec': "Recall",
-        # 'mIoU': "Mean Intersection over Union",
     }
     df_data = pd.read_csv(data_src, sep=';')
     df_data = df_data.loc[df_data.num_loop != 0]
 
     num_rows = int(np.ceil(len(metrics)/2))
     num_cols = min(len(metrics), 2)
+
     # plot
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(8, 4 * num_rows), sharex=True, sharey=False)
     axes = axes.flatten()
@@ -233,6 +344,22 @@ def show_inference_metrics(data_src, metrics = ['PQ', 'SQ', 'RQ', 'Pre', 'Rec'],
 
 
 def show_pseudo_labels_evolution(data_folder, src_location=None, only_fancy_inst_count=False, do_per_cluster=False, cluster_csv_file=None, show_figure=True, save_figure=False):
+    """
+    Plots the evolution of pseudo-label characteristics (instance count, stability, etc.) over training loops, optionally per cluster.
+
+    Args:
+        - data_folder (str): Path to the folder containing pseudo-label CSV files.
+        - src_location (str, optional): Path to save the figure, if saving is enabled.
+        - only_fancy_inst_count (bool, optional): If True, plots only the 'fancy instance count'.
+        - do_per_cluster (bool, optional): If True, performs analysis per cluster based on cluster CSV.
+        - cluster_csv_file (str, optional): Path to cluster mapping CSV file if per-cluster analysis is enabled.
+        - show_figure (bool, optional): If True, displays the figure.
+        - save_figure (bool, optional): If True, saves the figure to disk.
+
+    Returns:
+        - plt.Figure: The generated matplotlib figure showing pseudo-label evolution.
+    """
+    
     # load and generate data to show
     num_loop = 0
     count_sem = {}
@@ -432,6 +559,20 @@ def show_pseudo_labels_evolution(data_folder, src_location=None, only_fancy_inst
     
 
 def show_pseudo_labels_vs_gt(data_folder, src_location=None, metrics = ['PQ', 'SQ', 'RQ', 'Pre', 'Rec'], compute_metrics=False, show_figure=True, save_figure=False):
+    """
+    Visualizes the evolution of pseudo-label quality metrics (PQ, SQ, RQ, Precision, Recall) across self-training loops.
+
+    Args:
+        - data_folder (str): Path to the folder containing loop subfolders with pseudo-labels and optionally a precomputed metrics CSV.
+        - src_location (str, optional): File path to save the figure. Default is None.
+        - metrics (list, optional): List of metrics to visualize. Default is ['PQ', 'SQ', 'RQ', 'Pre', 'Rec'].
+        - compute_metrics (bool, optional): If True, computes metrics from pseudo-labels; otherwise loads from CSV. Default is False.
+        - show_figure (bool, optional): If True, displays the figure. Default is True.
+        - save_figure (bool, optional): If True, saves the figure to src_location. Default is False.
+
+    Returns:
+        - None
+    """
 
     abrev_to_name = {
         'PQ': "Panoptic Quality",
@@ -509,7 +650,7 @@ def show_pseudo_labels_vs_gt(data_folder, src_location=None, metrics = ['PQ', 'S
 
 def show_grid_search_metric(target_src, data, params, title, do_save=True, do_show=False):
     """
-    Plot the results of a grid search over 2 hyperparameters.
+    Plots a heatmap of a metric resulting from a grid search over two hyperparameters.
 
     Args:
     - target_src (str): File path where the plot will be saved.
@@ -539,6 +680,19 @@ def show_grid_search_metric(target_src, data, params, title, do_save=True, do_sh
 
 
 def show_grid_search(data_folder,  name_params = None, show_figure=True, save_figure=False):
+    """
+    Processes and visualizes grid search results, showing number of instances and multiple quality metrics.
+
+    Args:
+        - data_folder (str): Path to the folder containing grid search results and subfolders.
+        - name_params (list, optional): List of two parameter names (columns in grid_search.csv). Default is None.
+        - show_figure (bool, optional): If True, displays the plots. Default is True.
+        - save_figure (bool, optional): If True, saves the plots in the 'images' subfolder. Default is False.
+
+    Returns:
+        - None
+    """
+
     os.makedirs(os.path.join(data_folder, 'images'), exist_ok=True)
     df_links = pd.read_csv(os.path.join(data_folder, 'grid_search.csv'), sep=';')
 
@@ -569,10 +723,24 @@ def show_grid_search(data_folder,  name_params = None, show_figure=True, save_fi
 
 
 def show_recall_precision_per_cluster(data_src, metrics = ['Pre', 'Rec'], src_location=None, cluster_csv_file=None, show_figure=True, save_figure=False):
+    """
+    Plots Precision and Recall per cluster of tiles across training loops.
+
+    Args:
+        - data_src (str): Path to CSV file containing loop-wise metrics per tile.
+        - metrics (list, optional): List of metrics to plot (default ['Pre', 'Rec']).
+        - src_location (str, optional): Path to save the figure. Default is None.
+        - cluster_csv_file (str, optional): Path to CSV file containing cluster assignments. Default is None.
+        - show_figure (bool, optional): If True, displays the figure. Default is True.
+        - save_figure (bool, optional): If True, saves the figure to src_location. Default is False.
+
+    Returns:
+        - None
+    """
+    
     lst_clusters_labels = ['Crowded + Flat', 'Crowded + Steep', 'Empty + Steep', 'Empty + Flat']
     df_clusters = pd.read_csv(cluster_csv_file, sep=';')
     clusters = df_clusters.cluster_id.unique()
-    per_cluster = {x: [] for x in clusters}
     for _, cluster in tqdm(enumerate(clusters), total=len(clusters), desc="Processing pseudo-labels for visualization"):
         pass
     abrev_to_name = {
@@ -621,6 +789,20 @@ def show_recall_precision_per_cluster(data_src, metrics = ['Pre', 'Rec'], src_lo
 
 
 def show_test_set(data_folder, src_location=None, cluster_csv_file=None, show_figure=True, save_figure=False):
+    """
+    Analyzes and visualizes the distribution of prediction classes (garbage, multi, single) per cluster over training loops.
+
+    Args:
+        - data_folder (str): Path to the folder containing loop prediction results.
+        - src_location (str, optional): Path to save the figure. Default is None.
+        - cluster_csv_file (str, optional): Path to CSV file containing cluster assignments for the test set. Default is None.
+        - show_figure (bool, optional): If True, displays the figure. Default is True.
+        - save_figure (bool, optional): If True, saves the figure to src_location. Default is False.
+
+    Returns:
+        - None
+    """
+    
     # finding the number of loops
     lst_loops = []
     num_loop = 0
@@ -647,7 +829,7 @@ def show_test_set(data_folder, src_location=None, cluster_csv_file=None, show_fi
         lst_tiles = list(df_group.tile_name)
         
         for loop in lst_loops:
-            src_evaluation = os.path.join(data_folder, str(loop), 'evaluation')
+            src_evaluation = os.path.join(data_folder, 'loops', str(loop), 'preds')
             lst_folders = [x for x in os.listdir(src_evaluation) if os.path.isdir(os.path.join(src_evaluation, x)) and x.split('_out_split_instance')[0]+'.laz' in lst_tiles]
             for folder in lst_folders:
                 results_loop = pd.read_csv(os.path.join(src_evaluation, folder, "results/results.csv"), sep=';')

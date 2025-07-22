@@ -10,7 +10,6 @@ pipeline:
     upgrade_ground: False
     garbage_as_grey: True
     save_pseudo_labels_per_loop: True
-    # do_remove_hanging_points: True
     do_flatten: False
     flatten_tile_size: 10
     src_floors: /home/pdm/data/dataset_pipeline/tiles_20/floors
@@ -19,9 +18,12 @@ pipeline:
     src_existing: /home/pdm/results/for_paper/others/20250627_205749_gs_3_500
   debugging:
     keep_previous_data: False
-  eval_on_gt:
+  inference:
     src_existing: results/for_paper/final/final_training
-    src_data_gt: data/gt/gt
+    src_data: data/gt/gt
     results_root_src: results/eval
     result_src_name_suffixe: final_on_gt
+    is_gt: True
+    with_groups: False
+    groups_csv_path: ""  # need to be set if with_groups=True
 

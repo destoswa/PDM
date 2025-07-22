@@ -19,6 +19,17 @@ SRC_MODEL = "./models/KDE_classifier/models/pretrained/model_KDE.tar"
 
 
 def fast_inference(samples, args):
+    """
+    Perform fast inference on samples using a pre-trained KDE-based model.
+
+    Parameters:
+    - samples (list): List of input samples to infer on.
+    - args (dict): Dictionary containing inference parameters.
+
+    Returns:
+    - np.ndarray: Model predictions as a numpy array.
+    """
+    
     conf = {
         "num_class": args['inference']['num_class'],
         "grid_dim": args['inference']['grid_size'],

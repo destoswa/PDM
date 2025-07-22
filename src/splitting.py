@@ -7,6 +7,19 @@ from tqdm import tqdm
 
 
 def split_instance(src_file_in, path_out="", keep_ground=False, verbose=True):
+    """
+    Split a LAS/LAZ file into separate files based on PredInstance values.
+
+    Parameters:
+    - src_file_in (str): Path to the input LAS/LAZ file.
+    - path_out (str): Optional target directory. Default creates a sibling folder.
+    - keep_ground (bool): If False, ignores instance 0. Default is False.
+    - verbose (bool): If True, print progress. Default is True.
+
+    Returns:
+    - None
+    """
+    
     # Define target folder:
     if path_out == "":
         dir_target = os.path.join(os.path.dirname(src_file_in), os.path.basename(src_file_in).split('.')[0] + "_split_instance")
