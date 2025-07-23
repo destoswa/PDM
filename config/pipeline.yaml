@@ -8,22 +8,19 @@ pipeline:
   test_frac: 0.15
   processes:
     upgrade_ground: False
-    garbage_as_grey: True
     save_pseudo_labels_per_loop: True
     do_flatten: False
     flatten_tile_size: 10
-    src_floors: /home/pdm/data/dataset_pipeline/tiles_20/floors
   preload:
     do_continue_from_existing: True
     src_existing: /home/pdm/results/for_paper/others/20250627_205749_gs_3_500
   debugging:
-    keep_previous_data: False
+    keep_previous_data: False   # if True, will prevent the pipeline from erasing already existing results in the "loops" folder in the dataset. Used to skip the segementation and classification steps when debugging the pipeline.
   inference:
     src_existing: results/for_paper/final/final_training
     src_data: data/gt/gt
     results_root_src: results/eval
     result_src_name_suffixe: final_on_gt
-    is_gt: True
-    with_groups: False
+    is_gt: True     # if working with ground truth (tiles need to have a "gt_instance" attribute)
+    with_groups: False # if dataset is made of tiles selected from multiple groups (need to indicate the corresponding csv file with a "cluster_id" column)
     groups_csv_path: ""  # need to be set if with_groups=True
-

@@ -39,7 +39,6 @@ class Pipeline():
         self.current_loop = 0
         self.results_root_src = cfg.pipeline.results_root_src
         self.upgrade_ground = cfg.pipeline.processes.upgrade_ground
-        self.garbage_as_grey = cfg.pipeline.processes.garbage_as_grey
         self.save_pseudo_labels_per_loop = cfg.pipeline.processes.save_pseudo_labels_per_loop
         self.do_continue_from_existing = cfg.pipeline.preload.do_continue_from_existing
         self.log = ""
