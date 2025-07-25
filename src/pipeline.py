@@ -1014,7 +1014,6 @@ class Pipeline():
         self.run_subprocess(
             src_script="/home/pdm/models/SegmentAnyTree/",
             script_name="./run_sample_data_conversion.sh",
-            # params= [self.data_src],
             params= [self.result_pseudo_labels_dir],
             verbose=verbose
             )
@@ -1048,12 +1047,10 @@ class Pipeline():
             src_yaml=self.training.config_results_src,
             var='hydra/run/dir',
             val="../../" + os.path.normpath(self.results_root_src) + "/" + self.result_src_name + '/' + str(self.current_loop),
-            # val=self.result_current_loop_dir,
         )
 
         # run training script
         model_checkpoint = self.model_checkpoint_src if self.model_checkpoint_src != None else "/home/pdm/models/SegmentAnyTree/model_file"
-        # model_checkpoint = "/home/pdm/models/SegmentAnyTree/model_file"
         self.run_subprocess(
             src_script="/home/pdm/models/SegmentAnyTree/",
             script_name="./run_pipeline.sh",

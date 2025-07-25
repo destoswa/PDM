@@ -9,4 +9,3 @@ segmenter:
     batch_size: 16
     num_epochs_per_loop: 3
     sample_per_epoch: 500
-
