@@ -3,6 +3,12 @@
 # Self-Supervised Learning with Human Feedback for tree segmentation based on LIDAR data
 
 ### introduction
+...
+
+### pretrained models
+Before installing anything, the two pretrained models need to be downloaded. They can be both downloaded from the assets and need to be placed at the following locations:
+- Classifier: `pdm/models/KDE_classifier/models/pretrained/model_KDE.tar`
+- Segmenter: `pdm/models/SegmentAnyTree/model_file/PointGroup-PAPER.pt`
 
 ### how to install
 This project works through _Docker_. So, in order to set it up, you need to follow these steps:
