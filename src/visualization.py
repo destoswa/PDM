@@ -624,11 +624,14 @@ def show_pseudo_labels_vs_gt(data_folder, src_location=None, metrics = ['PQ', 'S
     # plot
     fig, axes = plt.subplots(3, 2, figsize=(12, 16), sharex=True, sharey=False)
     axes = axes.flatten()
-
     for i, metric in enumerate(metrics):
         # average over all the samples
         df_data_metric = df_metrics[['loop', metric]]
         df_data_metric = df_data_metric[df_data_metric[metric] != 0]
+        
+        # print(df_data_metric.columns)
+        # print(df_data_metric.index)
+        # quit()  
         df_data_metric = df_data_metric.groupby(df_data_metric["loop"]).mean()
 
         show_metric_over_samples(df_data_metric, metric, ax=axes[i])
@@ -810,7 +813,7 @@ def show_test_set(data_folder, src_location=None, cluster_csv_file=None, show_fi
     lst_loops = []
     num_loop = 0
     while True:
-        if not str(num_loop) in os.listdir(data_folder):
+        if not str(num_loop) in os.listdir(os.path.join(data_folder, 'loops')):
             break
         lst_loops.append(num_loop)
         num_loop += 1
@@ -832,7 +835,7 @@ def show_test_set(data_folder, src_location=None, cluster_csv_file=None, show_fi
         lst_tiles = list(df_group.tile_name)
         
         for loop in lst_loops:
-            src_evaluation = os.path.join(data_folder, str(loop), 'preds')
+            src_evaluation = os.path.join(data_folder, "loops", str(loop), 'preds')
             lst_folders = [x for x in os.listdir(src_evaluation) if os.path.isdir(os.path.join(src_evaluation, x)) and x.split('_out_split_instance')[0]+'.laz' in lst_tiles]
             for folder in lst_folders:
                 results_loop = pd.read_csv(os.path.join(src_evaluation, folder, "results/results.csv"), sep=';')
@@ -842,16 +845,18 @@ def show_test_set(data_folder, src_location=None, cluster_csv_file=None, show_fi
 
     results_agg = {
         x: {
-            'garbage': [np.nanmean(results_tot[x][loop]["garbage"]) for loop in lst_loops],
-            'multi': [np.nanmean(results_tot[x][loop]["multi"]) for loop in lst_loops],
-            'single': [np.nanmean(results_tot[x][loop]["single"]) for loop in lst_loops],
+            'garbage': [np.nanmean(results_tot[x][loop]["garbage"]) if len(results_tot[x][loop]["garbage"]) > 0 else 0 for loop in lst_loops],
+            'multi': [np.nanmean(results_tot[x][loop]["multi"]) if len(results_tot[x][loop]["garbage"]) > 0 else 0 for loop in lst_loops],
+            'single': [np.nanmean(results_tot[x][loop]["single"]) if len(results_tot[x][loop]["garbage"]) > 0 else 0 for loop in lst_loops],
             } for x in range(len(lst_tiles_tot))}
 
     fig, axs = plt.subplots(2,2,figsize=(12,12))
     axs = axs.flatten()
     for id_ax, ax in enumerate(axs):
-        df_results_agg = pd.DataFrame(results_agg[id_ax], index=range(len(lst_loops)))
-        sns.lineplot(df_results_agg, dashes=False, ax=ax)
+        x = np.arange(len(lst_loops))
+        sns.lineplot(x=x, y=np.array(results_agg[id_ax]['garbage']), ax=ax, label='garbage')
+        sns.lineplot(x=x, y=np.array(results_agg[id_ax]['multi']), ax=ax, label='multi')
+        sns.lineplot(x=x, y=np.array(results_agg[id_ax]['single']), ax=ax, label='single')
 
         ax.legend()
         ax.set_title(lst_titles[id_ax])
