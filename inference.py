@@ -163,10 +163,9 @@ def main(cfg):
 
 if __name__ == "__main__":
     cfg_dataset = OmegaConf.load('./config/dataset.yaml')
-    cfg_preprocess = OmegaConf.load('./config/preprocessing.yaml')
     cfg_pipeline = OmegaConf.load('./config/pipeline.yaml')
     cfg_classifier = OmegaConf.load('./config/classifier.yaml')
     cfg_segmenter = OmegaConf.load('./config/segmenter.yaml')
-    cfg = OmegaConf.merge(cfg_dataset, cfg_preprocess, cfg_pipeline, cfg_classifier, cfg_segmenter)
+    cfg = OmegaConf.merge(cfg_dataset, cfg_pipeline, cfg_classifier, cfg_segmenter)
 
     main(cfg)

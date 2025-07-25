@@ -1140,7 +1140,7 @@ class Pipeline():
             show_test_set(
                 data_folder=self.result_dir,
                 src_location=os.path.join(location_src, "peudo_labels_vs_gt.png"),
-                cluster_csv_file=self.cfg.inference.groups_csv_path,
+                cluster_csv_file=self.cfg.pipeline.inference.groups_csv_path,
                 show_figure=False,
                 save_figure=True,
             )
