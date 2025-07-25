@@ -872,12 +872,12 @@ if __name__ == '__main__':
     """
 
     # 1) To produce results related to the training of a pipeline
-    src_data_semantic = r"D:\PDM_repo\Github\PDM\results\for_paper\grid_search\20250627_205749_gs_3_500"    # only change this path
+    src_data_semantic = r"D:\PDM_repo\Github\PDM\results\test\20250725_165254_test_multi_as_tree_semantic"    # only change this path
     src_data_train = os.path.join(src_data_semantic, "training_metrics.csv")
     src_data_inf = os.path.join(src_data_semantic, "inference_metrics.csv")
     os.makedirs(os.path.join(src_data_semantic, 'images'), exist_ok=True)
-    show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), only_fancy_inst_count=True, save_figure=True, show_figure=False)
-    show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), save_figure=True, show_figure=False)
+    # show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), only_fancy_inst_count=True, save_figure=True, show_figure=False)
+    # show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), save_figure=True, show_figure=False)
     show_global_metrics(src_data_train, src_location=os.path.join(src_data_semantic, "images/training_metrics.png"), save_figure=True, show_figure=False)
     show_inference_counts(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_count.png"), save_figure=True, show_figure=False)
     show_problematic_empty(src_data_inf, src_location=os.path.join(src_data_semantic, "images/problematic_empty.png"), save_figure=True, show_figure=False)

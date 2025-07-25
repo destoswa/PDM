@@ -1,7 +1,7 @@
 pipeline:
   root_src: /home/pdm
-  results_root_src: results/for_paper/others
-  result_src_name_suffixe: with_multi_as_tree
+  results_root_src: results/test/
+  result_src_name_suffixe: test_multi_as_tree_semantic
   num_loops: 10
   train_frac: 0.7
   val_frac: 0.15
@@ -11,11 +11,12 @@ pipeline:
     save_pseudo_labels_per_loop: True
     do_flatten: False
     flatten_tile_size: 10
+    do_add_multi_as_trees_semantic: True
   preload:
     do_continue_from_existing: False
     src_existing: /home/pdm/results/for_paper/others/20250627_205749_gs_3_500
   debugging:
-    keep_previous_data: False   # if True, will prevent the pipeline from erasing already existing results in the "loops" folder in the dataset. Used to skip the segementation and classification steps when debugging the pipeline.
+    keep_previous_data: True   # if True, will prevent the pipeline from erasing already existing results in the "loops" folder in the dataset. Used to skip the segementation and classification steps when debugging the pipeline.
   inference:
     src_existing: results/test
     src_data: data/dataset_pipeline/test_group

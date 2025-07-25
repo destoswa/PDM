@@ -46,7 +46,6 @@ class Pipeline():
         # config regarding preprocess
         self.do_flatten = cfg.pipeline.processes.do_flatten
         self.flatten_tile_size = cfg.pipeline.processes.flatten_tile_size
-        # self.do_remove_hanging_points = cfg.pipeline.processes.do_remove_hanging_points
 
         # config regarding inference
         self.inference = cfg.segmenter.inference
@@ -58,6 +57,9 @@ class Pipeline():
         self.classification = cfg.classifier
         self.src_preds_classifier = None
         self.classified_clusters = None
+
+        # config regarding pseudo-labels
+        self.do_add_multi_as_trees_semantic = cfg.pipeline.processes.do_add_multi_as_trees_semantic
 
         # config regarding training
         self.training = cfg.segmenter.training
@@ -741,24 +743,47 @@ class Pipeline():
                 
             # load all clusters
             self.classified_clusters = []
+            self.multi_clusters = []
             for _, row in df_results.iterrows():
                 cluster_path = os.path.join(full_path, row.file_name.split('.pcd')[0] + '.' + self.file_format)
                 if not os.path.exists(cluster_path):
                     continue
+                if row['class'] == 0:
+                    continue
+
                 cluster = laspy.open(cluster_path, mode='r').read()
-                coords_B = np.stack((cluster.x, cluster.y, cluster.z), axis=1)
-                coords_B_view = coords_B.view([('', coords_B.dtype)] * 3).reshape(-1)
+                coords = np.stack((cluster.x, cluster.y, cluster.z), axis=1)
+                coords_view = coords.view([('', coords.dtype)] * 3).reshape(-1)
                 # if row['class'] in [1, 2]:
                 if row['class'] == 2:
-                    self.classified_clusters.append((coords_B_view, row['class']))
+                    self.classified_clusters.append((coords_view, row['class']))
+                elif row['class'] == 1:
+                    self.multi_clusters.append((coords_view, row['class']))
 
-            # create masks on the original tile for each cluster (multiprocessing)
-            with ProcessPoolExecutor() as executor:
-                partialFunc = partial(self.process_row, coords_original_file_view)
-                results = list(tqdm(executor.map(partialFunc, range(len(self.classified_clusters))), total=len(self.classified_clusters), smoothing=0.9, desc="Updating pseudo-label", disable=~verbose))
-            
-            # Update the original file based on results and update the csv file with ref to trees
+
+            # Processing multi
+            if self.do_add_multi_as_trees_semantic:
+                #   _Create masks on the original tile for each cluster (multiprocessing)
+                results = []
+                with ProcessPoolExecutor() as executor:
+                    partialFunc = partial(self.process_row_multi, coords_original_file_view)
+                    results = list(tqdm(executor.map(partialFunc, range(len(self.multi_clusters))), total=len(self.multi_clusters), smoothing=0.9, desc="Updating pseudo-label", disable=~verbose))
+
+                #   _Update the original file based on results and update the csv file with ref to trees
+                if len(self.multi_clusters) > 0:
+                    for id_tree, (mask, value) in tqdm(enumerate(results), total=len(results), desc='temp', disable=~verbose):
+                        new_file.classification[mask] = 4
+    
+            # Processing singles
             id_new_tree = len(set(new_file.treeID))
+
+            #   _Create masks on the original tile for each cluster (multiprocessing)
+            results = []
+            with ProcessPoolExecutor() as executor:
+                partialFunc = partial(self.process_row_single, coords_original_file_view)
+                results = list(tqdm(executor.map(partialFunc, range(len(self.classified_clusters))), total=len(self.classified_clusters), smoothing=0.9, desc="Updating pseudo-label", disable=~verbose))
+
+            #   _Update the original file based on results and update the csv file with ref to trees
             for id_tree, (mask, value) in tqdm(enumerate(results), total=len(results), desc='temp', disable=~verbose):
                 if verbose:
                     print(f"Processing prediction {id_tree} of size {np.sum(mask)}")
@@ -945,9 +970,15 @@ class Pipeline():
                 flatten_file.__setattr__('treeID', original_file.treeID)
                 flatten_file.write(flatten_pseudo_labels_src)
 
-    def process_row(self, coords_original_file_view, row_id):
+    def process_row_single(self, coords_original_file_view, row_id):
         # Find matching points between original file and cluster
         mask = np.isin(coords_original_file_view, self.classified_clusters[row_id][0])
+
+        return mask, self.classified_clusters[row_id][1]
+
+    def process_row_multi(self, coords_original_file_view, row_id):
+        # Find matching points between original file and cluster
+        mask = np.isin(coords_original_file_view, self.multi_clusters[row_id][0])
         
         return mask, self.classified_clusters[row_id][1]
 
@@ -993,7 +1024,7 @@ class Pipeline():
                 'PQ': PQ,
                 'SQ': SQ,
                 'RQ': RQ,
-                'Rec': round(tp/(tp + fn), 2) if tp + fn > 0 else 0,
+                'Rec': round(tp/(tp + fn), 2) if tp + fn > 0 else 0, 
                 'Pre': round(tp/(tp + fp),2) if tp + fp > 0 else 0,
             }
             for metric_name, metric_val in metrics.items():
