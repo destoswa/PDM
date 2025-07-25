@@ -628,10 +628,6 @@ def show_pseudo_labels_vs_gt(data_folder, src_location=None, metrics = ['PQ', 'S
         # average over all the samples
         df_data_metric = df_metrics[['loop', metric]]
         df_data_metric = df_data_metric[df_data_metric[metric] != 0]
-        
-        # print(df_data_metric.columns)
-        # print(df_data_metric.index)
-        # quit()  
         df_data_metric = df_data_metric.groupby(df_data_metric["loop"]).mean()
 
         show_metric_over_samples(df_data_metric, metric, ax=axes[i])
