@@ -183,6 +183,7 @@ def show_stages_losses(data_src, exclude_columns = ['num_loop', 'num_epoch', 'st
     stages.remove('test')
     colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
     labels = ['Training loss', 'Validation loss']
+    
     # plot
     fig = plt.figure(figsize=(8,5))
     for id_stage, stage in enumerate(stages):
@@ -866,43 +867,51 @@ def show_test_set(data_folder, src_location=None, cluster_csv_file=None, show_fi
 
 
 if __name__ == '__main__':
-    src_clusters_test = r"D:\PDM_repo\Github\PDM\data\final_dataset\testing_set.csv"
-    src_data_test_set = r"D:\PDM_repo\Github\PDM\results\for_paper\final\20250630_092819_final_training_eval"
-    show_test_set(src_data_test_set, src_location=os.path.join(src_data_test_set, 'images/test_set_results.png'), cluster_csv_file=src_clusters_test, show_figure=True, save_figure=True)
-    quit()
+    """
+    In this main, you can run the different functions to produce the figures you want.
+    The way it works is very basic. Comment every sections before the one you want to run and then comment the functions that you don't want to run.
+    Every section ends with a "quit()" command so no need to comment what comes after
+    """
 
-
-    src_data_gt = r"D:\PDM_repo\Github\PDM\results\eval\20250701_162429_final_on_gt"
-    src_grid_search = r"D:\PDM_repo\Github\PDM\results\for_paper\grid_search"
-    show_grid_search(src_grid_search, name_params=['Num epochs per loop', 'Num samples per epoch'], save_figure=True, show_figure=False)
-    quit()
-    # show_pseudo_labels_vs_gt(
-    #     src_data_gt, 
-    #     src_location=os.path.join(src_data_gt, "images/peudo_labels_vs_gt.png"), 
-    #     compute_metrics=False,
-    #     save_figure=True, 
-    #     show_figure=True),
-
-    src_data_semantic = r"D:\PDM_repo\Github\PDM\results\for_paper\grid_search\20250627_205749_gs_3_500"
+    # 1) To produce results related to the training of a pipeline
+    src_data_semantic = r"D:\PDM_repo\Github\PDM\results\for_paper\grid_search\20250627_205749_gs_3_500"    # only change this path
     src_data_train = os.path.join(src_data_semantic, "training_metrics.csv")
     src_data_inf = os.path.join(src_data_semantic, "inference_metrics.csv")
-    src_clusters = r"D:\PDM_repo\Github\PDM\results\for_paper\final\final_training\training_set.csv"
-    # show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), do_per_cluster=True, cluster_csv_file=src_clusters, only_fancy_inst_count=True, save_figure=True, show_figure=True)
-    # quit()
     os.makedirs(os.path.join(src_data_semantic, 'images'), exist_ok=True)
-    # show_recall_precision_per_cluster(src_data_inf, src_location=os.path.join(src_data_semantic, "images/recall_precission_per_cluster.png"), cluster_csv_file=src_clusters, show_figure=False, save_figure=True)
-    # quit()
     show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), only_fancy_inst_count=True, save_figure=True, show_figure=False)
-    # quit()
-    show_stages_losses(src_data_train, src_location=os.path.join(src_data_semantic, "images/loss.png"), save_figure=True, show_figure=False)
-    # quit()
-    show_training_losses(src_data_train, src_location=os.path.join(src_data_semantic, "images/losses.png"), save_figure=True, show_figure=False)
-    # quit()
     show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), save_figure=True, show_figure=False)
     show_global_metrics(src_data_train, src_location=os.path.join(src_data_semantic, "images/training_metrics.png"), save_figure=True, show_figure=False)
     show_inference_counts(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_count.png"), save_figure=True, show_figure=False)
     show_problematic_empty(src_data_inf, src_location=os.path.join(src_data_semantic, "images/problematic_empty.png"), save_figure=True, show_figure=False)
     show_inference_metrics(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_metrics.png"), save_figure=True, show_figure=False)
     show_inference_metrics(src_data_inf, metrics = ['Pre', 'Rec'], src_location=os.path.join(src_data_semantic, "images/inference_Rec_Pre.png"), save_figure=True, show_figure=False)
+    show_stages_losses(src_data_train, src_location=os.path.join(src_data_semantic, "images/loss.png"), save_figure=True, show_figure=False)
+    show_training_losses(src_data_train, src_location=os.path.join(src_data_semantic, "images/losses.png"), save_figure=True, show_figure=False)
+    quit()
 
-    
+
+    # 2) To produce results related to a training-set with groups (called clustered here)
+    src_data_semantic = r"D:\PDM_repo\Github\PDM\results\for_paper\grid_search\20250627_205749_gs_3_500"
+    src_clusters = r"D:\PDM_repo\Github\PDM\results\for_paper\final\final_training\training_set.csv"
+    show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), do_per_cluster=True, cluster_csv_file=src_clusters, only_fancy_inst_count=True, save_figure=True, show_figure=True)
+    show_recall_precision_per_cluster(src_data_inf, src_location=os.path.join(src_data_semantic, "images/recall_precission_per_cluster.png"), cluster_csv_file=src_clusters, show_figure=False, save_figure=True)
+    quit()
+
+
+    # 3) To produce results related to a test-set with groups (called clustered here)
+    src_clusters_test = r"D:\PDM_repo\Github\PDM\data\final_dataset\testing_set.csv"
+    src_data_test_set = r"D:\PDM_repo\Github\PDM\results\for_paper\final\20250630_092819_final_training_eval"
+    show_test_set(src_data_test_set, src_location=os.path.join(src_data_test_set, 'images/test_set_results.png'), cluster_csv_file=src_clusters_test, show_figure=True, save_figure=True)
+    quit()
+
+
+    # 4) To produce results related to ground truth
+    src_data_gt = r"D:\PDM_repo\Github\PDM\results\eval\20250701_162429_final_on_gt"
+    show_pseudo_labels_vs_gt(src_data_gt, src_location=os.path.join(src_data_gt, "images/peudo_labels_vs_gt.png"), compute_metrics=False, save_figure=True, show_figure=True)
+    quit()
+
+
+    # 5) To produce results related to a grid search
+    src_grid_search = r"D:\PDM_repo\Github\PDM\results\for_paper\grid_search"
+    show_grid_search(src_grid_search, name_params=['Num epochs per loop', 'Num samples per epoch'], save_figure=True, show_figure=False)
+    quit()
