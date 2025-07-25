@@ -8,8 +8,10 @@ import laspy
 from tqdm import tqdm
 from scipy.ndimage import uniform_filter1d
 
-sys.path.append("D:/PDM_repo/Github/PDM")
-from src.metrics import compute_panoptic_quality
+if __name__ == "__main__":
+    from metrics import compute_panoptic_quality
+else:
+    from src.metrics import compute_panoptic_quality
 
 
 def show_metric_over_epoch(df, metric_name, ax=None, save_figure=False, src_figure=None, show_figure=False):
@@ -183,7 +185,7 @@ def show_stages_losses(data_src, exclude_columns = ['num_loop', 'num_epoch', 'st
     stages.remove('test')
     colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
     labels = ['Training loss', 'Validation loss']
-    
+
     # plot
     fig = plt.figure(figsize=(8,5))
     for id_stage, stage in enumerate(stages):
@@ -559,7 +561,7 @@ def show_pseudo_labels_evolution(data_folder, src_location=None, only_fancy_inst
             plt.show()
     
 
-def show_pseudo_labels_vs_gt(data_folder, src_location=None, metrics = ['PQ', 'SQ', 'RQ', 'Pre', 'Rec'], compute_metrics=False, show_figure=True, save_figure=False):
+def show_pseudo_labels_vs_gt(data_folder, src_location=None, metrics = ['PQ', 'SQ', 'RQ', 'Pre', 'Rec'], compute_metrics=True, show_figure=True, save_figure=False):
     """
     Visualizes the evolution of pseudo-label quality metrics (PQ, SQ, RQ, Precision, Recall) across self-training loops.
 
@@ -627,7 +629,7 @@ def show_pseudo_labels_vs_gt(data_folder, src_location=None, metrics = ['PQ', 'S
         # average over all the samples
         df_data_metric = df_metrics[['loop', metric]]
         df_data_metric = df_data_metric[df_data_metric[metric] != 0]
-        df_data_metric = df_data_metric.groupby("loop").mean()
+        df_data_metric = df_data_metric.groupby(df_data_metric["loop"]).mean()
 
         show_metric_over_samples(df_data_metric, metric, ax=axes[i])
         
@@ -830,7 +832,7 @@ def show_test_set(data_folder, src_location=None, cluster_csv_file=None, show_fi
         lst_tiles = list(df_group.tile_name)
         
         for loop in lst_loops:
-            src_evaluation = os.path.join(data_folder, 'loops', str(loop), 'preds')
+            src_evaluation = os.path.join(data_folder, str(loop), 'preds')
             lst_folders = [x for x in os.listdir(src_evaluation) if os.path.isdir(os.path.join(src_evaluation, x)) and x.split('_out_split_instance')[0]+'.laz' in lst_tiles]
             for folder in lst_folders:
                 results_loop = pd.read_csv(os.path.join(src_evaluation, folder, "results/results.csv"), sep=';')
@@ -902,7 +904,7 @@ if __name__ == '__main__':
 
     # 4) To produce results related to ground truth
     src_data_gt = r"D:\PDM_repo\Github\PDM\results\eval\20250701_162429_final_on_gt"
-    show_pseudo_labels_vs_gt(src_data_gt, src_location=os.path.join(src_data_gt, "images/peudo_labels_vs_gt.png"), compute_metrics=False, save_figure=True, show_figure=True)
+    show_pseudo_labels_vs_gt(src_data_gt, src_location=os.path.join(src_data_gt, "images/peudo_labels_vs_gt.png"), compute_metrics=True, save_figure=True, show_figure=True)
     quit()
 
 
