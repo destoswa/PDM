@@ -760,7 +760,6 @@ class Pipeline():
                 elif row['class'] == 1:
                     self.multi_clusters.append((coords_view, row['class']))
 
-
             # Processing multi
             if self.do_add_multi_as_trees_semantic:
                 #   _Create masks on the original tile for each cluster (multiprocessing)
@@ -868,7 +867,6 @@ class Pipeline():
                     self.log += f"Length of corresponding instances: {len(set(corresponding_instances))} \n"
 
                     if len(set(corresponding_instances)) > 1:
-                        # print("More than one overlapp")
                         for instance in set(corresponding_instances):
                             # Don't split if ground
                             if instance == 0:

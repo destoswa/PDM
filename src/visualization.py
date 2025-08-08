@@ -40,7 +40,8 @@ def show_metric_over_epoch(df, metric_name, ax=None, save_figure=False, src_figu
 
     if save_figure:
         if src_figure != None and fig != None:
-            plt.savefig(fig, src_figure)
+            plt.savefig(src_figure)
+            plt.savefig(src_figure.split('.png')[0] + '.eps', format='eps')
         else:
             raise UserWarning("When saving figure, the ax should not be precised and the src should be precise!")
         
@@ -75,7 +76,8 @@ def show_metric_over_samples(df, metric_name, ax=None, save_figure=False, src_fi
 
     if save_figure:
         if src_figure != None and fig != None:
-            plt.savefig(fig, src_figure)
+            plt.savefig(src_figure)
+            plt.savefig(src_figure.split('.png')[0] + '.eps', format='eps')
         else:
             raise UserWarning("When saving figure, the ax should not be precised and the src should be precise!")
         
@@ -122,6 +124,7 @@ def show_global_metrics(data_src, exclude_columns = ['num_loop', 'num_epoch', 's
     plt.tight_layout()
     if save_figure and src_location != None:
         plt.savefig(src_location)
+        plt.savefig(src_location.split('.png')[0] + '.eps', format='eps')
 
     if show_figure:
         plt.show()
@@ -159,6 +162,7 @@ def show_training_losses(data_src, src_location=None, show_figure=True, save_fig
     plt.tight_layout()
     if save_figure and src_location != None:
         plt.savefig(src_location)
+        plt.savefig(src_location.split('.png')[0] + '.eps', format='eps')
 
     if show_figure:
         plt.show()
@@ -207,6 +211,7 @@ def show_stages_losses(data_src, exclude_columns = ['num_loop', 'num_epoch', 'st
     plt.tight_layout()
     if save_figure and src_location != None:
         plt.savefig(src_location)
+        plt.savefig(src_location.split('.png')[0] + '.eps', format='eps')
 
     if show_figure:
         plt.show()
@@ -247,6 +252,7 @@ def show_inference_counts(data_src, src_location=None, show_figure=True, save_fi
     plt.tight_layout()
     if save_figure and src_location != None:
         plt.savefig(src_location)
+        plt.savefig(src_location.split('.png')[0] + '.eps', format='eps')
 
     if show_figure:
         plt.show()
@@ -283,6 +289,7 @@ def show_problematic_empty(data_src, src_location=None, show_figure=True, save_f
     plt.tight_layout()
     if save_figure and src_location != None:
         plt.savefig(src_location)
+        plt.savefig(src_location.split('.png')[0] + '.eps', format='eps')
 
     if show_figure:
         plt.show()
@@ -341,6 +348,7 @@ def show_inference_metrics(data_src, metrics = ['PQ', 'SQ', 'RQ', 'Pre', 'Rec'],
     plt.tight_layout()
     if save_figure and src_location != None:
         plt.savefig(src_location)
+        plt.savefig(src_location.split('.png')[0] + '.eps', format='eps')
 
     if show_figure:
         plt.show()
@@ -502,6 +510,7 @@ def show_pseudo_labels_evolution(data_folder, src_location=None, only_fancy_inst
             if save_figure and src_location != None:
                 print()
                 plt.savefig(src_location.split('.png')[0] + '_count_instances_per_cluster.png')
+                plt.savefig(src_location.split('.png')[0] + '_count_instances_per_cluster.eps', format='eps')
 
             if show_figure:
                 plt.show()
@@ -532,6 +541,7 @@ def show_pseudo_labels_evolution(data_folder, src_location=None, only_fancy_inst
 
             if save_figure and src_location != None:
                 plt.savefig(src_location.split('.png')[0] + '_count_instances.png')
+                plt.savefig(src_location.split('.png')[0] + '_count_instances.eps', format='eps')
 
             if show_figure:
                 plt.show()
@@ -556,6 +566,7 @@ def show_pseudo_labels_evolution(data_folder, src_location=None, only_fancy_inst
         plt.tight_layout()
         if save_figure and src_location != None:
             plt.savefig(src_location)
+            plt.savefig(src_location.split('.')[0] + '.eps', format='eps')
 
         if show_figure:
             plt.show()
@@ -645,6 +656,7 @@ def show_pseudo_labels_vs_gt(data_folder, src_location=None, metrics = ['PQ', 'S
     plt.tight_layout()
     if save_figure and src_location != None:
         plt.savefig(src_location)
+        plt.savefig(src_location.split('.')[0] + '.eps', format='eps')
 
     if show_figure:
         plt.show()
@@ -669,11 +681,12 @@ def show_grid_search_metric(target_src, data, params, title, do_save=True, do_sh
     glue = data.pivot(index=params[0], columns=params[1], values="value")
     sns.heatmap(glue, annot=True, cmap=sns.color_palette("Blues", as_cmap=True), fmt='g')
     plt.title(title)
-    plt.xlabel(params[0])
-    plt.ylabel(params[1])
+    plt.xlabel(params[1])
+    plt.ylabel(params[0])
 
     if do_save:
         plt.savefig(target_src)
+        plt.savefig(target_src.split('.')[0] + '.eps', format='eps')
 
     if do_show:
         plt.show()
@@ -785,6 +798,7 @@ def show_recall_precision_per_cluster(data_src, metrics = ['Pre', 'Rec'], src_lo
     plt.tight_layout()
     if save_figure and src_location != None:
         plt.savefig(src_location)
+        plt.savefig(src_location.split('.')[0] + '.eps', format='eps')
 
     if show_figure:
         plt.show()
@@ -859,6 +873,7 @@ def show_test_set(data_folder, src_location=None, cluster_csv_file=None, show_fi
 
     if save_figure and src_location != None:
         plt.savefig(src_location)
+        plt.savefig(src_location.split('.')[0] + '.eps', format='eps')
 
     if show_figure:
         plt.show()
@@ -871,42 +886,43 @@ if __name__ == '__main__':
     Every section ends with a "quit()" command so no need to comment what comes after
     """
 
-    # 1) To produce results related to the training of a pipeline
-    src_data_semantic = r"D:\PDM_repo\Github\PDM\results\test\20250725_165254_test_multi_as_tree_semantic"    # only change this path
-    src_data_train = os.path.join(src_data_semantic, "training_metrics.csv")
-    src_data_inf = os.path.join(src_data_semantic, "inference_metrics.csv")
-    os.makedirs(os.path.join(src_data_semantic, 'images'), exist_ok=True)
-    # show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), only_fancy_inst_count=True, save_figure=True, show_figure=False)
-    # show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), save_figure=True, show_figure=False)
-    show_global_metrics(src_data_train, src_location=os.path.join(src_data_semantic, "images/training_metrics.png"), save_figure=True, show_figure=False)
-    show_inference_counts(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_count.png"), save_figure=True, show_figure=False)
-    show_problematic_empty(src_data_inf, src_location=os.path.join(src_data_semantic, "images/problematic_empty.png"), save_figure=True, show_figure=False)
-    show_inference_metrics(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_metrics.png"), save_figure=True, show_figure=False)
-    show_inference_metrics(src_data_inf, metrics = ['Pre', 'Rec'], src_location=os.path.join(src_data_semantic, "images/inference_Rec_Pre.png"), save_figure=True, show_figure=False)
-    show_stages_losses(src_data_train, src_location=os.path.join(src_data_semantic, "images/loss.png"), save_figure=True, show_figure=False)
-    show_training_losses(src_data_train, src_location=os.path.join(src_data_semantic, "images/losses.png"), save_figure=True, show_figure=False)
-    quit()
+    # # 1) To produce results related to the training of a pipeline
+    # src_data_semantic = r"D:\PDM_repo\Github\PDM\results\for_paper\learning_rate\lr=0.001"    # only change this path
+    # src_data_train = os.path.join(src_data_semantic, "training_metrics.csv")
+    # src_data_inf = os.path.join(src_data_semantic, "inference_metrics.csv")
+    # os.makedirs(os.path.join(src_data_semantic, 'images'), exist_ok=True)
+    # # show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), only_fancy_inst_count=True, save_figure=True, show_figure=False)
+    # # show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), save_figure=True, show_figure=False)
+    # # show_global_metrics(src_data_train, src_location=os.path.join(src_data_semantic, "images/training_metrics.png"), save_figure=True, show_figure=False)
+    # # show_inference_counts(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_count.png"), save_figure=True, show_figure=False)
+    # # quit()
+    # # show_problematic_empty(src_data_inf, src_location=os.path.join(src_data_semantic, "images/problematic_empty.png"), save_figure=True, show_figure=False)
+    # # show_inference_metrics(src_data_inf, src_location=os.path.join(src_data_semantic, "images/inference_metrics.png"), save_figure=True, show_figure=False)
+    # # show_inference_metrics(src_data_inf, metrics = ['Pre', 'Rec'], src_location=os.path.join(src_data_semantic, "images/inference_Rec_Pre.png"), save_figure=True, show_figure=False)
+    # show_stages_losses(src_data_train, src_location=os.path.join(src_data_semantic, "images/loss.png"), save_figure=True, show_figure=False)
+    # # show_training_losses(src_data_train, src_location=os.path.join(src_data_semantic, "images/losses.png"), save_figure=True, show_figure=False)
+    # quit()
 
 
-    # 2) To produce results related to a training-set with groups (called clustered here)
-    src_data_semantic = r"D:\PDM_repo\Github\PDM\results\for_paper\grid_search\20250627_205749_gs_3_500"
-    src_clusters = r"D:\PDM_repo\Github\PDM\results\for_paper\final\final_training\training_set.csv"
-    show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), do_per_cluster=True, cluster_csv_file=src_clusters, only_fancy_inst_count=True, save_figure=True, show_figure=True)
-    show_recall_precision_per_cluster(src_data_inf, src_location=os.path.join(src_data_semantic, "images/recall_precission_per_cluster.png"), cluster_csv_file=src_clusters, show_figure=False, save_figure=True)
-    quit()
+    # # # 2) To produce results related to a training-set with groups (called clustered here)
+    # # src_data_semantic = r"D:\PDM_repo\Github\PDM\results\for_paper\grid_search\20250627_205749_gs_3_500"
+    # # src_clusters = r"D:\PDM_repo\Github\PDM\results\for_paper\final\final_training\training_set.csv"
+    # # show_pseudo_labels_evolution(src_data_semantic, src_location=os.path.join(src_data_semantic, "images/pseudo_labels_results.png"), do_per_cluster=True, cluster_csv_file=src_clusters, only_fancy_inst_count=True, save_figure=True, show_figure=True)
+    # # show_recall_precision_per_cluster(src_data_inf, src_location=os.path.join(src_data_semantic, "images/recall_precission_per_cluster.png"), cluster_csv_file=src_clusters, show_figure=False, save_figure=True)
+    # # quit()
 
 
     # 3) To produce results related to a test-set with groups (called clustered here)
     src_clusters_test = r"D:\PDM_repo\Github\PDM\data\final_dataset\testing_set.csv"
-    src_data_test_set = r"D:\PDM_repo\Github\PDM\results\for_paper\final\20250630_092819_final_training_eval"
+    src_data_test_set = r"D:\PDM_repo\Github\PDM\results\eval\20250729_181022_inf_group_final"
     show_test_set(src_data_test_set, src_location=os.path.join(src_data_test_set, 'images/test_set_results.png'), cluster_csv_file=src_clusters_test, show_figure=True, save_figure=True)
     quit()
 
 
-    # 4) To produce results related to ground truth
-    src_data_gt = r"D:\PDM_repo\Github\PDM\results\eval\20250701_162429_final_on_gt"
-    show_pseudo_labels_vs_gt(src_data_gt, src_location=os.path.join(src_data_gt, "images/peudo_labels_vs_gt.png"), compute_metrics=True, save_figure=True, show_figure=True)
-    quit()
+    # # 4) To produce results related to ground truth
+    # src_data_gt = r"D:\PDM_repo\Github\PDM\results\eval\20250701_162429_final_on_gt"
+    # show_pseudo_labels_vs_gt(src_data_gt, src_location=os.path.join(src_data_gt, "images/peudo_labels_vs_gt.png"), compute_metrics=True, save_figure=True, show_figure=True)
+    # quit()
 
 
     # 5) To produce results related to a grid search

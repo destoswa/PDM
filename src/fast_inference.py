@@ -15,10 +15,10 @@ from models.KDE_classifier.src.utils import ToKDE
 from omegaconf import OmegaConf
 from packaging import version
 
-SRC_MODEL = "./models/KDE_classifier/models/pretrained/model_KDE.tar"
 
 
 def fast_inference(samples, args):
+    SRC_MODEL = "../models/KDE_classifier/models/pretrained/model_KDE.tar"
     """
     Perform fast inference on samples using a pre-trained KDE-based model.
 
@@ -38,9 +38,9 @@ def fast_inference(samples, args):
     # Load the model
     model = KDE_cls_model(conf).to(torch.device('cuda'))
     if version.parse(torch.__version__) >= version.parse("2.1.0"):
-        checkpoint = torch.load(SRC_MODEL, weights_only=False)
+        checkpoint = torch.load("../models/KDE_classifier/models/pretrained/model_KDE.tar", weights_only=False)
     else:
-        checkpoint = torch.load(SRC_MODEL)
+        checkpoint = torch.load("../models/KDE_classifier/models/pretrained/model_KDE.tar")
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
 
