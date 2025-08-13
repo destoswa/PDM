@@ -3,7 +3,20 @@
 # Self-Supervised Learning with Human Feedback for tree segmentation based on LIDAR data
 
 ### introduction
-...
+This repo contain the code of the pipeline for finetuning a segmentation model (SegmentAnyTree) into any new dataset using Weakly-Supervised Learning from Human Feedback.
+
+Following is the abstract of the corresponding paper:
+
+Tree instance segmentation in 3D point cloud data is of utmost importance for forest monitoring, but remains challenging due
+to variety in the data caused by factors such as sensor resolution, vegetation state during acquisition, terrain characteristics, etc.
+Moreover, obtaining a sufficient amount of precisely labeled data to train fully supervised instance segmentation methods is ex-
+pensive. To address these challenges, this work proposes a weakly supervised approach where labels of an initial segmentation
+result obtained either by a non-finetuned model or a closed form algorithm are provided as a quality rating by a human operator.
+These labels are used to train a rating model, whose task is to classify a segmentation output into the same classes as specified by
+the human operator. The finetuned model produces an increase of 34% in the number of correctly identified trees, coupled with a
+drastic reduction in the proportion of garbage predictions, albeit challenges remain in precisely segmenting trees in areas with very
+dense forest canopies or sparsely forested regions characterized by trees under two meters in height where terrain features (rocks,
+shrubs, etc.) can be confused as trees.
 
 ### pretrained models
 Before installing anything, the two pretrained models need to be downloaded. They can be both downloaded from the assets and need to be placed at the following locations:
@@ -65,3 +78,8 @@ The cooresponding configuration parameters to drive the inference are located in
 The two flags `is_gt` and `with_groups` are to be set if the inference is done on tiles that have ground truth and if they correspond to a grouping with a corresponding csv file assigning each tile to a group (called cluster).
 
 The grouping is done in the jupyter notebook `./notebooks/cluster_tiles.ipynb` and the ground truth is done in the notebook `notebooks/ground_truth_generation.ipynb` with the assistance of the software _CloudCompare_ and the tool _PointCLoudCleaner_
+
+#### additional note
+It worth noting that intermediatary results are stored at different locations:
+- The different versions of the pseudo-labels are stored in the results
+- The different versions of the predictions and corrections are stored in the dataset (and reset from one training/inference to the other)
